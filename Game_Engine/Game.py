@@ -1,5 +1,5 @@
-from Card import Deck, Card
-from Trick import Trick
+from Game_Engine.Card import Deck, Card
+from Game_Engine.Trick import Trick
 
 
 class Game(object):
@@ -39,8 +39,7 @@ class Game(object):
             self.players[i].wins = wins[i]
         for trick_num in range(self.game_num):
             # Play a trick for each card in the hand (or game number).
-            trick = Trick(self.trump_card, self.players, self.first_player,
-                          self.played_cards)
+            trick = Trick(self.trump_card, self.players, self.first_player, self.played_cards)
             winner, trick_cards = trick.play()
             # Trick winner gets a win and starts the next trick.
             wins[winner] += 1

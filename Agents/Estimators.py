@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from Card import Card
+from Game_Engine.Card import Card
 from keras.models import Model, model_from_json
 from keras.layers import Dense, Input
 

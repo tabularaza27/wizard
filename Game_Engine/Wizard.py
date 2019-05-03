@@ -1,5 +1,5 @@
-from Game import Game
-from Player import RandomPlayer, AverageRandomPlayer
+from Game_Engine.Game import Game
+from Game_Engine.Player import RandomPlayer, AverageRandomPlayer
 from random import seed, getstate
 
 
