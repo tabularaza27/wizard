@@ -1,4 +1,4 @@
-import Card
+from Game_Engine import Card
 
 
 class Featurizer(object):

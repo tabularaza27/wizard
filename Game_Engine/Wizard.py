@@ -1,5 +1,5 @@
-from Game import Game
-from Player import RandomPlayer, AverageRandomPlayer
+from Game_Engine.Game import Game
+from Game_Engine.Player import AverageRandomPlayer
 from random import seed, getstate
 
 
@@ -33,7 +33,7 @@ class Wizard(object):
             list: The scores for each player.
 
         """
-        # print("Playing a Wizard game!")
+        # print("Playing a random game!")
         for game_num in range(1, self.games_to_play+1):
             game = Game(game_num, self.players)
             score = game.play()

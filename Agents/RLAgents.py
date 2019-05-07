@@ -1,7 +1,5 @@
-import Estimators
-import Policies
-import Featurizers
-from Player import Player, RandomPlayer, AverageRandomPlayer
+from Agents import Estimators, Featurizers, Policies
+from Game_Engine.Player import AverageRandomPlayer
 import numpy as np
 
 
