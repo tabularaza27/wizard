@@ -1,5 +1,6 @@
 import numpy as np
-from Game_Engine.Card import Card
+
+from game_engine.card import Card
 
 
 class Policy(object):

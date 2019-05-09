@@ -1,6 +1,7 @@
-from random import shuffle, randrange, choice
-from collections import Counter
-from Game_Engine import Card
+import random
+import collections
+
+from game_engine.card import Card
 
 
 class Player(object):
@@ -67,7 +68,7 @@ class RandomPlayer(Player):
         possible_actions = super().get_playable_cards(first)
         if not isinstance(possible_actions, list):
             possible_actions = list(possible_actions)
-        shuffle(possible_actions)
+        random.shuffle(possible_actions)
         card_to_play = possible_actions[0]
         self.hand.remove(card_to_play)
         # print("Playing card {} from {}".format(card_to_play, self.hand))
@@ -77,13 +78,13 @@ class RandomPlayer(Player):
         """Randomly return any number of wins between 0 and total number
          of games.
          """
-        prediction = randrange(len(self.hand))
+        prediction = random.randrange(len(self.hand))
         self.prediction = prediction
         return prediction
 
     def get_trump_color(self):
         # Randomly return any color except white.
-        return choice(Card.Card.colors[1:])
+        return random.choice(Card.colors[1:])
 
 
 class AverageRandomPlayer(RandomPlayer):
@@ -101,7 +102,7 @@ class AverageRandomPlayer(RandomPlayer):
 
     def get_trump_color(self):
         # Return the color the agent has the most of in its hand.
-        color_counter = Counter()
+        color_counter = collections.Counter()
         for card in self.hand:
             color = card.color
             if color == "White":

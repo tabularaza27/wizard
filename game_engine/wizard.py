@@ -1,6 +1,7 @@
-from Game_Engine.Game import Game
-from Game_Engine.Player import AverageRandomPlayer
-from random import seed, getstate
+import random
+
+from game_engine.game import Game
+from game_engine.player import AverageRandomPlayer
 
 
 class Wizard(object):
@@ -48,7 +49,7 @@ class Wizard(object):
 
 if __name__ == "__main__":
     print("Playing a random game of 4 players.")
-    seed(2)
+    random.seed(2)
     wiz = Wizard(4)
-    print(getstate())
+    print(random.getstate())
     print(wiz.play())

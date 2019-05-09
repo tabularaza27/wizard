@@ -5,7 +5,7 @@ import sys
 
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Wizard_Site.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'wizard_site.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

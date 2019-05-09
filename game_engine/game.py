@@ -1,5 +1,6 @@
-from Game_Engine.Card import Deck, Card
-from Game_Engine.Trick import Trick
+from game_engine.card import Card
+from game_engine.deck import Deck
+from game_engine.trick import Trick
 
 
 class Game(object):
@@ -17,7 +18,7 @@ class Game(object):
         self.played_cards = []
 
     def play(self):
-        #print("Playing game #{}".format(self.game_num))
+        # print("Playing game #{}".format(self.game_num))
         # New game, new deck. No played cards.
         self.played_cards = []
         self.trump_card = self.distribute_cards()[0]
@@ -39,8 +40,8 @@ class Game(object):
             self.players[i].wins = wins[i]
         for trick_num in range(self.game_num):
             # Play a trick for each card in the hand (or game number).
-            trick = Trick(self.trump_card, self.players, self.first_player, self.played_cards)
-            winner, trick_cards = trick.play()
+            trick_instance = Trick(self.trump_card, self.players, self.first_player, self.played_cards)
+            winner, trick_cards = trick_instance.play()
             # Trick winner gets a win and starts the next trick.
             wins[winner] += 1
             self.first_player = winner
@@ -49,7 +50,7 @@ class Game(object):
             # Update wins
             for i in range(len(self.players)):
                 self.players[i].wins = wins[i]
-            #print("{} won the game!".format(winner))
+            # print("{} won the game!".format(winner))
         return self.get_scores(wins)
 
     def distribute_cards(self):

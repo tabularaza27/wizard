@@ -1,4 +1,4 @@
-from Game_Engine import Card
+from game_engine.card import Card
 
 
 class Featurizer(object):
@@ -36,8 +36,7 @@ class Featurizer(object):
         first_color = self.color_to_bin_arr(first)
         player_score_win_predict = self.players_to_arr(players, player)
 
-        return hand_arr + trick_arr + game_arr + trump_color + first_color \
-               + player_score_win_predict
+        return hand_arr + trick_arr + game_arr + trump_color + first_color + player_score_win_predict
 
     @staticmethod
     def cards_to_arr(cards):
@@ -51,16 +50,16 @@ class Featurizer(object):
         Returns:
             arr: array (len==54) indicating the count of each card.
         """
-        arr = [0]*Card.Card.DIFFERENT_CARDS
-        for card in cards:
-            arr[int(card)] += 1
+        arr = [0] * Card.DIFFERENT_CARDS
+        for c in cards:
+            arr[int(c)] += 1
         return arr
 
     @staticmethod
     def color_to_bin_arr(card):
         """
         Transforms a color into a one-hot encoding of it. The index order is
-        given by Card.Card.colors .
+        given by card.Card.colors .
         Args:
             card: (Card) the card to extract color from.
             May be none.
@@ -69,12 +68,12 @@ class Featurizer(object):
             arr: one-hot encoding array of the color
 
         """
-        bin_arr = [0]*len(Card.Card.colors)
+        bin_arr = [0] * len(Card.colors)
         if card is None:
             return bin_arr
         else:
             color = card.color
-        index = Card.Card.colors.index(color)
+        index = Card.colors.index(color)
         bin_arr[index] = 1
         return bin_arr
 

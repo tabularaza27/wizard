@@ -1,8 +1,9 @@
 import random
 import numpy as np
-from Game_Engine.Card import Card
 from keras.models import Model, model_from_json
 from keras.layers import Dense, Input
+
+from game_engine.card import Card
 
 
 class Estimator(object):

@@ -1,23 +1,24 @@
-from Agents import Estimators, Featurizers, Policies
-from Game_Engine.Player import AverageRandomPlayer
 import numpy as np
 
+from agents import estimators, featurizers, policies
+from game_engine import player
 
-class RLAgent(AverageRandomPlayer):
+
+class RLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
     def __init__(self, estimator=None, policy=None, featurizer=None):
         super().__init__()
         if estimator is None:
-            self.estimator = Estimators.DQNEstimator()
+            self.estimator = estimators.DQNEstimator()
         else:
             self.estimator = estimator
         if policy is None:
-            self.policy = Policies.EGreedyPolicy(self.estimator, epsilon=0.1)
+            self.policy = policies.EGreedyPolicy(self.estimator, epsilon=0.1)
         else:
             self.policy = policy
         if featurizer is None:
-            self.featurizer = Featurizers.Featurizer()
+            self.featurizer = featurizers.Featurizer()
         else:
             self.featurizer = featurizer
         self.old_state = None
