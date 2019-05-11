@@ -48,18 +48,15 @@ class Game:
         """
         # print("Playing a random game!")
         for round_num in range(1, self.rounds_to_play + 1):
-            print("Play Round No. {}".format(round_num))
+            # print("Play Round No. {}".format(round_num))
             round = Round(round_num, self.players)
             score = round.play_round()
             for i in range(self.num_players):
                 self.scores[i] += score[i]
             # print("Scores: {}".format(self.scores))
-            for player in self.players:
-                print(player.score)
-        print("Final scores: {}".format(self.scores))
+        # print("Final scores: {}".format(self.scores))
         for player in self.players:
-            print(player.score)
-            # player.reset_score()
+            player.reset_score()
         return self.scores
 
 
