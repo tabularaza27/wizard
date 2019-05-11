@@ -1,47 +1,38 @@
-<h1>Wizard RL Engine</h1>
-<h4>Setup</h4>
-Activate the virualenv:<br>
-<code>$ source Dependencies/bin/activate</code>
-<br>
-Install dependencies: <br>
-<code>$ pip install -r requirements.txt</code>
+# Wizard RL Engin
 
-<h4>Usage</h4>
+#### Setup
+Activate the virualenv: \
+```$ source Dependencies/bin/activate ```
 
-From the root directory, to run a standard RL game:<br>
-<code>$ python3 main.py</code>
+Install dependencies: \
+```pip install -r requirements.txt```
 
-To update the requirements.txt file:<br>
-<code>$ pip freeze > requirements.txt</code>
+#### Usage
+
+From the root directory, to run a standard RL game: \
+```$ python3 main.py```
+
+To update the requirements.txt file: \
+```$ pip freeze > requirements.txt```
 
 #### Nomenclature
 
 * Game
-* Round 
+* Round
 * Trick
 * Player
 * Card
-* Deck
+* Deck  
 
-<h4>Architechture</h4>
-
-<pre>
-Game Engine 
-    Card.py <em>Generates the physical cards</em>
-    Game.py <em>Manages each round of tricks</em>
-    Player.py <em>Manages each player. All agents adopt from this class</em>
-    Trick.py 
-    Wizard.py
-
-
-</pre>
-    
-
-<h4>Git Commands</h4>
+#### Git Commands
 https://github.com/joshnh/Git-Commands
 
-<h4>Style Guide</h4>
+#### Style Guide
 
 https://www.python.org/dev/peps/pep-0008/
 
 https://google.github.io/styleguide/pyguide.html
+
+#### Markdown CheatSheet
+
+https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet#code
