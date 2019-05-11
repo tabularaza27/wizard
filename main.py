@@ -12,7 +12,7 @@ from game_engine import player
 
 games = 2000
 seed(2)
-players = [RLAgent() for _ in range(4)]
+players = [RLAgent() for _ in range(2)]
 # players[0].load_estimator()
 # for rl_player in range(3):
 #     players.append(RLAgent(estimator=players[0].estimator))
@@ -25,5 +25,6 @@ for i in range(games):
     wiz = Game(players=players)
     scores.append(wiz.play_game())
 players[0].save_estimator()
+players[0].predictor.save_model()
 scores = np.array(scores)
 print("Done")

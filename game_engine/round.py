@@ -110,7 +110,7 @@ class Round:
             else:
                 scores[i] = -10*abs(difference)
             # print("Player score for this round {}: {}".format(i, scores[i]))
-            player.give_reward(scores[i])
+            player.announce_result(wins[i], scores[i])
         return scores
 
 

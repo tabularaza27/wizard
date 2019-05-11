@@ -3,3 +3,6 @@ archive/
 # the trained model
 default.h5
 default.json
+
+# the trained predictor
+prediction_model*.h5

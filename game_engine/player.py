@@ -64,7 +64,8 @@ class Player:
     def get_trump_color(self):
         raise NotImplementedError("This needs to be implemented by your Player class")
 
-    def give_reward(self, reward):
+    def announce_result(self, num_tricks_achieved, reward):
+        self.num_tricks_achieved = num_tricks_achieved
         self.reward = reward
         self.score += reward
 

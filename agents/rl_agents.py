@@ -1,6 +1,6 @@
 import numpy as np
 
-from agents import estimators, featurizers, policies
+from agents import estimators, featurizers, policies, predictors
 from game_engine import player
 
 
@@ -24,6 +24,8 @@ class RLAgent(player.AverageRandomPlayer):
         self.old_state = None
         self.old_score = 0
         self.old_action = None
+
+        self.predictor = predictors.Predictor()
 
     def play_card(self, trump, first, played, players, played_in_game):
         """Plays a card according to the estimator Q function and learns
@@ -60,7 +62,7 @@ class RLAgent(player.AverageRandomPlayer):
         card_to_play = self._remove_card_played(a)
         self.old_state = None if terminal else state
         self.old_action = a
-        self.give_reward(0)  # After playing a card, the reward is 0.
+        self.reward = 0  # After playing a card, the reward is 0.
         # Unless it's the last card of the game, then the Round object will
         # call give_reward before the next play_card, setting the correct reward
         return card_to_play
@@ -100,3 +102,10 @@ class RLAgent(player.AverageRandomPlayer):
                                "action.\nHand: {}\nAction: {}".format(self.hand,
                                                                       a))
         return card_to_return
+
+    def get_prediction(self, trump, num_players):
+        return self.predictor.make_prediction(self.hand, trump)
+
+    def announce_result(self, num_tricks_achieved, reward):
+        super().announce_result(num_tricks_achieved, reward)
+        self.predictor.add_game_result(num_tricks_achieved)
