@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import numpy as np
 from Game_Engine.Wizard import Wizard
 from Agents.RLAgents import RLAgent
 from Game_Engine.Player import *
