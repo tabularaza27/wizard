@@ -83,7 +83,7 @@ class Predictor:
         self.model.save(self.model_path)
 
     def make_prediction(self, initial_cards: List[Card],
-            trump_color_card: List[Card]) -> int:
+            trump_color_card: Card) -> int:
         """Predict the number of tricks based on initial cards + trump color.
 
         Args:
