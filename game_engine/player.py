@@ -1,9 +1,23 @@
-from random import shuffle, randrange, choice
-from collections import Counter
-from Game_Engine import Card
+"""Implements Player Base class and its subclasses RandomPlayer and AverageRandomPlayer"""
+
+import random
+import collections
+
+from game_engine.card import Card
 
 
-class Player(object):
+class Player:
+    """Player Base Class
+
+    Attributes:
+        hand (:obj: `list` of :obj: `Card`): list of cards in players hand
+        score (int): current score of the player
+        reward (int):
+        wins (int): # of won tricks by player
+        prediction (int): prediction for current round
+
+
+    """
 
     def __init__(self):
         self.hand = []
@@ -13,6 +27,15 @@ class Player(object):
         self.prediction = -1
 
     def get_playable_cards(self, first):
+        """Determines the currently possible cards that player can play, based on his hand and the suit of the first
+        card of the trick
+
+        Args:
+            first (Card): first card, that has been played in the current trick.
+
+        Returns:
+            list of Cards that player can play
+        """
         playable_cards = []
         first_colors = []
         if first is None:
@@ -35,7 +58,7 @@ class Player(object):
     def play_card(self, trump, first, played, players, played_in_game):
         raise NotImplementedError("This needs to be implemented by your Player class")
 
-    def get_prediction(self, trump, predictions, players):
+    def get_prediction(self, trump, num_players):
         raise NotImplementedError("This needs to be implemented by your Player class")
 
     def get_trump_color(self):
@@ -53,37 +76,50 @@ class Player(object):
 
 
 class RandomPlayer(Player):
-    """A completely random agent, it always chooses all
-    its actions randomly"""
+    """A completely random agent, it always chooses all its actions randomly"""
 
     def __init__(self):
         super().__init__()
 
-    def play_card(self, trump, first, played, players, played_in_game):
+    def play_card(self, trump, first, played_in_round, players, played_in_game):
         """Randomly play any VALID card.
+
+        Args:
+            trump (Card): trump of the current round
+            first (Card): first card played in the current trick
+            played_in_round (:obj: `list` of `Card`): list of cards played in the round. Not used in random player
+            players (:obj: `list` of `Player`): list of players in the game. Not used in random player
+            played_in_game (:obj: `list` of `Card`): list of cards played in the game. Not used in random player
+
         Returns:
-            card_to_play: (Card) the chosen card from the player hand.
+            Card: the chosen card from the player hand to play in the current trick
             """
         possible_actions = super().get_playable_cards(first)
         if not isinstance(possible_actions, list):
             possible_actions = list(possible_actions)
-        shuffle(possible_actions)
+        random.shuffle(possible_actions)
         card_to_play = possible_actions[0]
         self.hand.remove(card_to_play)
         # print("Playing card {} from {}".format(card_to_play, self.hand))
         return card_to_play
 
-    def get_prediction(self, trump, predictions, players):
-        """Randomly return any number of wins between 0 and total number
-         of games.
-         """
-        prediction = randrange(len(self.hand))
+    def get_prediction(self, trump, num_players):
+        """Randomly return any number of wins between 0 and total number of games.
+
+        Returns:
+            int: number of wins predicted for the round
+        """
+        prediction = random.randrange(len(self.hand))
         self.prediction = prediction
         return prediction
 
     def get_trump_color(self):
-        # Randomly return any color except white.
-        return choice(Card.Card.colors[1:])
+        """Randomly chooses trump color from cards of own hand
+
+        Returns:
+            str: color of trump
+        """
+        return random.choice(Card.colors[1:])
 
 
 class AverageRandomPlayer(RandomPlayer):
@@ -94,14 +130,28 @@ class AverageRandomPlayer(RandomPlayer):
     def __init__(self):
         super().__init__()
 
-    def get_prediction(self, trump, predictions, players):
-        prediction = len(self.hand) // len(predictions)
+    def get_prediction(self, trump, num_players):
+        """Predicts number of tricks corresponding to: #card on hand / # players
+
+        Args:
+            trump (Card): not used for this agent
+            num_players (int): number of players in the game
+
+        Returns:
+            int: number of predicted trick by player for current round
+        """
+        prediction = len(self.hand) // num_players
         self.prediction = prediction
+
         return prediction
 
     def get_trump_color(self):
-        # Return the color the agent has the most of in its hand.
-        color_counter = Counter()
+        """Determines trump color by choosing the color the agent has the most og in its hand
+
+        Returns:
+            str: color of trump
+        """
+        color_counter = collections.Counter()
         for card in self.hand:
             color = card.color
             if color == "White":

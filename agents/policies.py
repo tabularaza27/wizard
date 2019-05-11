@@ -1,5 +1,6 @@
 import numpy as np
-from Game_Engine.Card import Card
+
+from game_engine.card import Card
 
 
 class Policy(object):
@@ -20,7 +21,7 @@ class Policy(object):
         Returns the q values calculated by the estimator, but filtered by
         the available cards in hand.
         Args:
-            x: Game state, the first 54 elements should describe the hand
+            x: Round state, the first 54 elements should describe the hand
             of the player.
 
         Returns:
@@ -41,7 +42,7 @@ class Policy(object):
         """
         Returns a boolean array of the playable actions.
         Args:
-            x:  Game state, the first 54 elements should describe the hand
+            x:  Round state, the first 54 elements should describe the hand
             of the player.
 
         Returns:
