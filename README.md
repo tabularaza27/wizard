@@ -14,6 +14,15 @@ From the root directory, to run a standard RL game:<br>
 To update the requirements.txt file:<br>
 <code>$ pip freeze > requirements.txt</code>
 
+#### Nomenclature
+
+* Game
+* Round 
+* Trick
+* Player
+* Card
+* Deck
+
 <h4>Architechture</h4>
 
 <pre>

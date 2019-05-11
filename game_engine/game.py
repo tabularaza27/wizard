@@ -1,89 +1,71 @@
-from game_engine.card import Card
-from game_engine.deck import Deck
-from game_engine.trick import Trick
+import random
+
+from game_engine.round import Round
+from game_engine.player import AverageRandomPlayer
 
 
-class Game(object):
-    """Game object, plays a number of tricks and awards points depending
-    on the outcome of the tricks and the predictions."""
+class Game:
+    """Wrapper for the whole game
 
-    def __init__(self, game_num, players):
-        self.game_num = game_num
-        self.players = players
-        self.deck = Deck()
-        self.predictions = [-1]*len(players)
-        self.trump_card = None
-        # -1 adjusts for 1-index in game numbers and 0-index in players
-        self.first_player = (game_num-1) % len(players)
-        self.played_cards = []
+    Attributes
+        players (:obj: `list` of :obj: `Player`): list containing objects of players
+        num_players (int): amount of players in the game
+        rounds_to_play (int): rounds to play in the whole game
+        scores (:obj: `list` of :obj: `int`): list containing scores for each player for the whole game
 
-    def play(self):
-        # print("Playing game #{}".format(self.game_num))
-        # New game, new deck. No played cards.
-        self.played_cards = []
-        self.trump_card = self.distribute_cards()[0]
-        if self.trump_card is None:
-            # We distributed all cards, the trump is N. (No trump)
-            self.trump_card = Card("White", 0)
+    """
+    NUM_CARDS = 60
+
+    def __init__(self, num_players=4, players=None):
+        """        
+        Args:
+            num_players (int): amount of default players in the game, if `players` argument is None. 
+                               Has to be between 2 and 6.
+            players (:obj: `list` of :obj: `Player`): list containg objects of players. If not specified, game is played
+                                                      with AverageRandomPlayer objects only. Number of players
+        """
+        self.players = []
+        if players is None:
+            assert 2 <= num_players <= 6, "Not enough players!" \
+                                     "Give an array of players or a" \
+                                     "number of players between [2-6]"
+            for player in range(num_players):
+                # Initialize all players
+                # print("Creating players.")
+                self.players.append(AverageRandomPlayer())
         else:
-            self.played_cards.append(self.trump_card)
-        if self.trump_card.value == 14:
-            # Trump card is a Z, ask the dealer for a trump color.
-            self.trump_card.color =\
-                self.players[self.first_player].get_trump_color()
-        # Now that each player has a hand, ask for predictions.
-        self.ask_for_predictions()
-        # print("Final predictions {}".format(self.predictions))
-        # Reset all wins.
-        wins = [0]*len(self.players)
-        for i in range(len(self.players)):
-            self.players[i].wins = wins[i]
-        for trick_num in range(self.game_num):
-            # Play a trick for each card in the hand (or game number).
-            trick_instance = Trick(self.trump_card, self.players, self.first_player, self.played_cards)
-            winner, trick_cards = trick_instance.play()
-            # Trick winner gets a win and starts the next trick.
-            wins[winner] += 1
-            self.first_player = winner
-            # Game keeps track of the played cards.
-            self.played_cards += trick_cards
-            # Update wins
-            for i in range(len(self.players)):
-                self.players[i].wins = wins[i]
-            # print("{} won the game!".format(winner))
-        return self.get_scores(wins)
+            self.players = players
+            
+        self.num_players = len(self.players)
+        self.rounds_to_play = Game.NUM_CARDS // self.num_players
+        self.scores = [0] * self.num_players
 
-    def distribute_cards(self):
-        # Draw as many cards as game num.
-        for _ in range(self.game_num):
+    def play_game(self):
+        """ Starts a game with the generated players.
+
+        Returns:
+            list of int: The scores for each player.
+        """
+        # print("Playing a random game!")
+        for round_num in range(1, self.rounds_to_play + 1):
+            print("Play Round No. {}".format(round_num))
+            round = Round(round_num, self.players)
+            score = round.play_round()
+            for i in range(self.num_players):
+                self.scores[i] += score[i]
+            # print("Scores: {}".format(self.scores))
             for player in self.players:
-                player.hand += self.deck.draw()
-        # Flip the next card, that is the trump card.
-        if self.deck.is_empty():
-            return [None]
-        else:
-            return self.deck.draw()
+                print(player.score)
+        print("Final scores: {}".format(self.scores))
+        for player in self.players:
+            print(player.score)
+            # player.reset_score()
+        return self.scores
 
-    def ask_for_predictions(self):
-        num_players = len(self.players)
-        for i in range(num_players):
-            # Start with the first player and ascend, then reset at 0.
-            current_player_index = (self.first_player + i) % num_players
-            player = self.players[current_player_index]
-            prediction = player.get_prediction(self.trump_card,
-                                               self.predictions,
-                                               self.players)
-            self.predictions[current_player_index] = prediction
-            """print("Player {} predicted {}".format(current_player_index,
-                                                  prediction))"""
 
-    def get_scores(self, wins):
-        scores = [0]*len(self.players)
-        for i in range(len(self.players)):
-            difference = self.predictions[i] - wins[i]
-            if difference == 0:
-                scores[i] = 20 + wins[i]*10
-            else:
-                scores[i] = -10*abs(difference)
-            self.players[i].give_reward(scores[i])
-        return scores
+if __name__ == "__main__":
+    print("Playing a random game of 4 players.")
+    random.seed(4)
+    game = Game(num_players=4)
+    # print(random.getstate())
+    game.play_game()

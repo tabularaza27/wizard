@@ -2,47 +2,76 @@ from game_engine.card import Card
 
 
 class Trick(object):
-    def __init__(self, trump_card, players, first_player, played_cards_in_game):
+    """Trick object, plays one trick and determines the winner
+
+    Attributes:
+        trump_card (Card): specifies trump_color
+        players (:obj: `list` of :obj: `int`): list of player objects
+        first_player (int): index of player that is coming out in this round
+        played_cards_in_round(:obj: `list` of :obj: `Card`): list of cards already played in the round
+                                                             (a round consists of several tricks)
+    """
+    def __init__(self, trump_card, players, first_player, played_cards_in_round):
+        """
+        Args:
+            trump_card (Card): specifies trump_color
+            players (:obj: `list` of :obj: `int`): list of player objects
+            first_player (int): index of player that is coming out in this round
+            played_cards_in_round(:obj: `list` of :obj: `Card`): list of cards already played in the round
+                                                                 (a round consists of several tricks)
+        """
         self.trump_card = trump_card
         self.players = players
+        self.played_cards_in_round = played_cards_in_round
         self.first_player = first_player
-        self.first_card = None
-        self.played_cards_in_game = played_cards_in_game
 
-    def play(self):
-        winner = None
+    def play_trick(self):
+        """every player plays a card. winner of the trick is determined
+
+        Returns:
+            (int, list of :obj: `Card`): index of winning player, list of cards played in the trick
+        """
+        # define trick variables
+        first_card = None
+        winning_card = None
+        winning_player = None
         num_players = len(self.players)
         trick_cards = []
-        for i in range(num_players):
-            player_index = (self.first_player+i) % num_players
+
+        for i in range(len(self.players)):
             # Start with the first player and ascend, then reset at 0.
+            player_index = (self.first_player+i) % num_players
             player = self.players[player_index]
-            played_card = player.play_card(self.trump_card, self.first_card,
+            played_card = player.play_card(self.trump_card, first_card,
                                            trick_cards, self.players,
-                                           self.played_cards_in_game)
+                                           self.played_cards_in_round)
+            # print("Player {} played {}".format(player_index, played_card))
             trick_cards.append(played_card)
-            if self.first_card is None and played_card.value != 0:
-                self.first_card = played_card
-            if winner is None or Trick.is_new_winner(played_card, winner[0],
-                                               self.trump_card,
-                                               self.first_card):
-                winner = (played_card, player_index)
-            """print("First card: {}\nTrump card: {}\nWinning: {}".format(self.first_card,
-                                                                       self.trump_card,
-                                                                       winner))"""
-        return winner[1], trick_cards
+
+            # if it is the first card played in the trick
+            # set first card played to determine suit to follow, if first card is N there is no suit in the trick
+            if first_card is None and played_card.value != 0:
+                first_card = played_card
+
+            # determine if current player is new winner of the trick
+            if winning_player is None or Trick.is_new_winner(new_card=played_card, old_card=winning_card, trump=self.trump_card, first_card=first_card):
+                winning_card = played_card
+                winning_player = player_index
+            # print("First card:{}, Trump card:{}, Winning:{}".format(first_card,self.trump_card,winning_player))
+        return winning_player, trick_cards
 
     @staticmethod
     def is_new_winner(new_card, old_card, trump, first_card):
-        """
-        Returns True if the new_card wins, taking into account trump
-        colors, first_card color and order.
+        """Determines wether the new played card wins the trick
 
-        :param new_card: Card played LATER.
-        :param old_card: Current winning Card.
-        :param trump: Trump card.
-        :param first_card: First card played. May be None.
-        :return: The winning card.
+        Args:
+            new_card (Card): card that contests with current winning card
+            old_card (Card): card currently winning the trick
+            trump (Card): trump card
+            first_card (Card): first card played. Determines the suit of the trick. May be None
+
+        Returns:
+            bool: True if the new_card wins, taking into account trump colors, first_card color and order.
         """
         # If a Z was played first, it wins.
         if old_card.value == 14:

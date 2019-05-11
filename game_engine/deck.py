@@ -4,7 +4,14 @@ from game_engine.card import Card
 
 
 class Deck(object):
+    """All cards the game is played with
 
+    Note:
+        Four Colors with numbers 1- 13
+        Four Wizards (Z)
+        Four Jesters (N)
+        Wizards and Jesters have artificial color `White`
+    """
     def __init__(self):
         self.cards = []
         # Add four colors with 1-13 cards.
@@ -18,11 +25,13 @@ class Deck(object):
         random.shuffle(self.cards)
 
     def draw(self, num=1):
-        """
-        Returns a list of the drawn cards from the deck.
-        Removes the card from the deck.
-        :param num: int Number of cards to draw.
-        :return: list: Cards drawn
+        """Draw specified number of cards from the deck. Default is to draw 1 card.
+
+        Args:
+            num (int): number of cards to draw from the deck
+
+        Returns:
+            :obj: `list` of :obj: `Card`: list of Cards drawn from the top of the deck
         """
         drawn = []
         for _ in range(num):
@@ -30,4 +39,9 @@ class Deck(object):
         return drawn
 
     def is_empty(self):
+        """Checks if deck is empty, meaning no cards are left in the deck
+
+        Returns:
+            bool: True if deck is empty, False else
+        """
         return len(self.cards) <= 0
