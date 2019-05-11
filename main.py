@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from Game_Engine.Wizard import Wizard
 from Agents.RLAgents import RLAgent
 from Game_Engine.Player import *
