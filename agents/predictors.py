@@ -8,24 +8,27 @@ from agents.featurizers import Featurizer
 from game_engine.card import Card
 
 class Predictor:
-    """Predictor object, uses a NN to predict the number of tricks achieved in a round.
+    """Predictor object, predicts the number of tricks achieved in a round.
 
     Attributes:
         x_dim (int): The input shape of the NN. Equal to
             - 4 * 13 = 52 for numbered color cards
             - 2 for wizards & jesters
             - 5 for trump colors (4 colors + no trump)
-        max_num_tricks (int): Determines the output shape of the NN and therefore
-            restricts the possible number of tricks which can be predicted
+        max_num_tricks (int): Determines the output shape of the NN and
+            therefore restricts the possible number of tricks
+            which can be predicted
         y_dim (int): The output shape of the NN.
             Equal to max_num_tricks + 1 (as 0 tricks can be predicted)
         x_batch (np.array[train_batch_size][x_dim]): Because we don't want to
-            train the NN after each round, we store the data in these batch arrays
-            and train it after train_batch_size rounds
-        y_batch (np.array[train_batch_size][y_dim]): Same as x_batch for the labels
-        batch_position (int): Determines our current position in x_batch, y_batch.
-            Resets to 0 after train_batch_size rounds.
-        model_path (str): The path to the file where the parameters etc. of the NN are stored
+            train the NN after each round, we store the data
+            in these batch arrays and train it after train_batch_size rounds
+        y_batch (np.array[train_batch_size][y_dim]):
+            Same as x_batch for the labels
+        batch_position (int): Determines our current position
+            in x_batch, y_batch. Resets to 0 after train_batch_size rounds.
+        model_path (str): The path to the file where the parameters etc.
+            of the NN are stored
         model (keras.models.Model): The NN
     """
 
@@ -49,11 +52,12 @@ class Predictor:
             self._build_new_model()
 
     def _build_prediction_to_expected_num_points_matrix(self):
-        # We can describe the calculation from the output of the NN (array of probabilities)
-        # to the array of expected points as a matrix-vector-multiplication where
-        # the matrix describes for each possible prediction we could make and each
-        # game outcome the points we would get in this case.
-        # This function computes this matrix once and stores it in self.prediction_to_points
+        # We can describe the calculation from the output of the NN
+        # (array of probabilities) to the array of expected points as a
+        # matrix-vector-multiplication where the matrix describes for each
+        # possible prediction we could make and each game outcome the
+        # points we would get in this case. This function computes this matrix
+        # once and stores it in self.prediction_to_points
 
         self.prediction_to_points = np.zeros((self.y_dim, self.y_dim))
         for actual_num_tricks in range(self.y_dim):
@@ -63,7 +67,8 @@ class Predictor:
                     num_points = 20 + predicted_num_tricks * 10
                 else:
                     num_points = -10 * difference
-                self.prediction_to_points[actual_num_tricks][predicted_num_tricks] = num_points
+                self.prediction_to_points[actual_num_tricks] \
+                    [predicted_num_tricks] = num_points
 
     def _build_new_model(self):
         self.model = K.Sequential([
@@ -77,35 +82,43 @@ class Predictor:
     def save_model(self):
         self.model.save(self.model_path)
 
-    def make_prediction(self, initial_cards: List[Card], trump_color_card: List[Card]) -> int:
-        """Predict the number of tricks based on the initial cards & the trump color.
+    def make_prediction(self, initial_cards: List[Card],
+            trump_color_card: List[Card]) -> int:
+        """Predict the number of tricks based on initial cards + trump color.
 
         Args:
             initial_cards: The current hand of the agent
             trump_color_card: A card which has the trump color
 
-        Returns: The predicted number of tricks based on whichever has the highest expected reward
+        Returns: The predicted number of tricks based on
+            whichever has the highest expected reward
         """
 
         self.x = np.array(Featurizer.cards_to_arr(initial_cards) +
             Featurizer.color_to_bin_arr(trump_color_card))
         self.x_batch[self.batch_position] = self.x
 
-        probability_distribution = self.model.predict(self.x.reshape(1, Predictor.x_dim)).T
-        expected_num_points = self.prediction_to_points @ probability_distribution
+        probability_distribution = self.model.predict(
+            self.x.reshape(1, Predictor.x_dim)).T
+        expected_num_points = self.prediction_to_points \
+            @ probability_distribution
         return np.argmax(expected_num_points)
 
     def add_game_result(self, num_tricks_achieved: int):
-        """Adds the corresponding label to the cards & trump color passed to make_prediction before.
+        """Adds the corresponding label to the cards & trump color
+        passed to make_prediction before.
 
-        Also trains the NN if train_batch_size rounds have passed since the last training.
+        Also trains the NN if train_batch_size rounds have passed
+        since the last training.
 
         Args:
-            num_tricks_achieved: The number of tricks achieved after the round which
-                corresponds to the one passed to make_prediction before. Used as a label.
+            num_tricks_achieved: The number of tricks achieved
+                after the round which corresponds to the one
+                passed to make_prediction before. Used as a label.
         """
 
-        self.y = K.utils.to_categorical(num_tricks_achieved, num_classes=self.y_dim)
+        self.y = K.utils.to_categorical(num_tricks_achieved,
+            num_classes=self.y_dim)
         self.y_batch[self.batch_position] = self.y
         self.batch_position += 1
 
