@@ -1,1 +1,5 @@
 archive/
+
+# the trained model
+default.h5
+default.json
