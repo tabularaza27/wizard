@@ -12,10 +12,12 @@ from game_engine import player
 
 games = 2000
 seed(2)
-players = [RLAgent() for _ in range(2)]
+players = [RLAgent()]
 # players[0].load_estimator()
-# for rl_player in range(3):
-#     players.append(RLAgent(estimator=players[0].estimator))
+for rl_player in range(1):
+    players.append(RLAgent(
+        estimator=players[0].estimator,
+        predictor=players[0].predictor))
 players.append(player.AverageRandomPlayer())
 players.append(player.RandomPlayer())
 scores = []

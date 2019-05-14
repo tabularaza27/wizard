@@ -7,25 +7,32 @@ from game_engine import player
 class RLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
-    def __init__(self, estimator=None, policy=None, featurizer=None):
+    def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None):
         super().__init__()
         if estimator is None:
             self.estimator = estimators.DQNEstimator()
         else:
             self.estimator = estimator
+
         if policy is None:
             self.policy = policies.EGreedyPolicy(self.estimator, epsilon=0.1)
         else:
             self.policy = policy
+
         if featurizer is None:
             self.featurizer = featurizers.Featurizer()
         else:
             self.featurizer = featurizer
+
+        if predictor is None:
+            self.predictor = predictors.Predictor()
+        else:
+            self.predictor = predictor
+
         self.old_state = None
         self.old_score = 0
         self.old_action = None
 
-        self.predictor = predictors.Predictor()
 
     def play_card(self, trump, first, played, players, played_in_game):
         """Plays a card according to the estimator Q function and learns
@@ -104,8 +111,10 @@ class RLAgent(player.AverageRandomPlayer):
         return card_to_return
 
     def get_prediction(self, trump, num_players):
-        return self.predictor.make_prediction(self.hand, trump)
+        self.prediction_x, prediction = \
+            self.predictor.make_prediction(self.hand, trump)
+        return prediction
 
     def announce_result(self, num_tricks_achieved, reward):
         super().announce_result(num_tricks_achieved, reward)
-        self.predictor.add_game_result(num_tricks_achieved)
+        self.predictor.add_game_result(self.prediction_x, num_tricks_achieved)
