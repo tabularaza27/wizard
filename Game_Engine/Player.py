@@ -67,10 +67,8 @@ class RandomPlayer(Player):
         possible_actions = super().get_playable_cards(first)
         if not isinstance(possible_actions, list):
             possible_actions = list(possible_actions)
-        shuffle(possible_actions)
-        card_to_play = possible_actions[0]
+        card_to_play = choice(possible_actions)
         self.hand.remove(card_to_play)
-        # print("Playing card {} from {}".format(card_to_play, self.hand))
         return card_to_play
 
     def get_prediction(self, trump, predictions, players):
