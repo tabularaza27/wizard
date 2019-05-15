@@ -33,9 +33,8 @@ class Deck(object):
         Returns:
             :obj: `list` of :obj: `Card`: list of Cards drawn from the top of the deck
         """
-        drawn = []
-        for _ in range(num):
-            drawn.append(self.cards.pop())
+        drawn = self.cards[-num:]
+        del self.cards[-num:]
         return drawn
 
     def is_empty(self):

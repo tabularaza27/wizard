@@ -82,9 +82,8 @@ class Round:
 
     def distribute_cards(self):
         # Draw as many cards as game num.
-        for _ in range(self.round_num):
-            for player in self.players:
-                player.hand += self.deck.draw()
+        for player in self.players:
+            player.hand += self.deck.draw(self.round_num)
         # Flip the next card, that is the trump card.
         if self.deck.is_empty():
             return [None]
