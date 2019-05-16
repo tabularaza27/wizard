@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow.keras as K
@@ -35,7 +35,7 @@ class Predictor:
     x_dim = 59
 
     def __init__(self, model_path='prediction_model', max_num_tricks=15,
-            train_batch_size=500):
+            train_batch_size=1000):
         self.max_num_tricks = max_num_tricks
         self.y_dim = self.max_num_tricks + 1
         self._build_prediction_to_expected_num_points_matrix()
@@ -83,43 +83,46 @@ class Predictor:
         self.model.save(self.model_path)
 
     def make_prediction(self, initial_cards: List[Card],
-            trump_color_card: Card) -> int:
+            trump_color_card: Card) -> Tuple[np.ndarray, int]:
         """Predict the number of tricks based on initial cards + trump color.
 
         Args:
             initial_cards: The current hand of the agent
             trump_color_card: A card which has the trump color
 
-        Returns: The predicted number of tricks based on
-            whichever has the highest expected reward
+        Returns: A tuple consisting of
+            - The input used for the NN. Should be passed to
+              add_game_result once the result is available
+            - The predicted number of tricks based on
+              whichever has the highest expected reward
         """
 
-        self.x = np.array(Featurizer.cards_to_arr(initial_cards) +
+        x = np.array(Featurizer.cards_to_arr(initial_cards) +
             Featurizer.color_to_bin_arr(trump_color_card))
-        self.x_batch[self.batch_position] = self.x
-
         probability_distribution = self.model.predict(
-            self.x.reshape(1, Predictor.x_dim)).T
+            x.reshape(1, Predictor.x_dim)).T
         expected_num_points = self.prediction_to_points \
             @ probability_distribution
-        return np.argmax(expected_num_points)
+        return x, np.argmax(expected_num_points)
 
-    def add_game_result(self, num_tricks_achieved: int):
-        """Adds the corresponding label to the cards & trump color
-        passed to make_prediction before.
+    def add_game_result(self, x: np.ndarray, num_tricks_achieved: int):
+        """Adds the corresponding label to the cards & trump color in x.
 
         Also trains the NN if train_batch_size rounds have passed
         since the last training.
 
         Args:
+            x: The result from make_prediction which has been called
+                when the game started.
             num_tricks_achieved: The number of tricks achieved
                 after the round which corresponds to the one
                 passed to make_prediction before. Used as a label.
         """
 
-        self.y = K.utils.to_categorical(num_tricks_achieved,
-            num_classes=self.y_dim)
-        self.y_batch[self.batch_position] = self.y
+        y = K.utils.to_categorical(num_tricks_achieved, num_classes=self.y_dim)
+
+        self.x_batch[self.batch_position] = x
+        self.y_batch[self.batch_position] = y
         self.batch_position += 1
 
         if self.batch_position == self.train_batch_size - 1:
