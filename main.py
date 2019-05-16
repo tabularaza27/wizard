@@ -6,16 +6,16 @@ from random import seed
 import numpy as np
 
 from game_engine.game import Game
-from agents.rl_agents import RLAgent
+from agents.original.rl_agents import OriginalRLAgent
 from game_engine import player
 
 
 games = 2000
 seed(2)
-players = [RLAgent()]
+players = [OriginalRLAgent()]
 # players[0].load_estimator()
 for rl_player in range(1):
-    players.append(RLAgent(
+    players.append(OriginalRLAgent(
         estimator=players[0].estimator,
         predictor=players[0].predictor))
 players.append(player.AverageRandomPlayer())

@@ -4,7 +4,7 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow.keras as K
 
-from agents.featurizers import Featurizer
+from agents.original.featurizers import OriginalFeaturizer
 from game_engine.card import Card
 
 class Predictor:
@@ -97,8 +97,8 @@ class Predictor:
               whichever has the highest expected reward
         """
 
-        x = np.array(Featurizer.cards_to_arr(initial_cards) +
-            Featurizer.color_to_bin_arr(trump_color_card))
+        x = np.array(OriginalFeaturizer.cards_to_arr(initial_cards) +
+                     OriginalFeaturizer.color_to_bin_arr(trump_color_card))
         probability_distribution = self.model.predict(
             x.reshape(1, Predictor.x_dim)).T
         expected_num_points = self.prediction_to_points \

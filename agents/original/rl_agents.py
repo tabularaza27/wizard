@@ -1,10 +1,11 @@
 import numpy as np
 
-from agents import estimators, featurizers, policies, predictors
+from agents import predictors
+from agents.original import featurizers, estimators, policies
 from game_engine import player
 
 
-class RLAgent(player.AverageRandomPlayer):
+class OriginalRLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
     def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None):
@@ -20,7 +21,7 @@ class RLAgent(player.AverageRandomPlayer):
             self.policy = policy
 
         if featurizer is None:
-            self.featurizer = featurizers.Featurizer()
+            self.featurizer = featurizers.OriginalFeaturizer()
         else:
             self.featurizer = featurizer
 

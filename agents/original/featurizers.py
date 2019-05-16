@@ -1,7 +1,7 @@
 from game_engine.card import Card
 
 
-class Featurizer(object):
+class OriginalFeaturizer(object):
     """This class takes a state (all data given to choose a card to play)
     and transforms it into an array that is useful for an estimator."""
 
