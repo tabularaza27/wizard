@@ -37,10 +37,10 @@ class RuleBasedAgent(player.Player):
                     prediction += 0.1
         prediction = weight * prediction + (1-weight) * len(self.hand) // num_players
         prediction = round(self.bound(prediction,len(self.hand), 0), 0)
-        print("######### Round:" + str(len(self.hand)) + " ##########")
-        print(self.hand)
-        print("Prediction: " + str(prediction))
-        print("Trump: " + str(trump))
+        # print("######### Round:" + str(len(self.hand)) + " ##########")
+        # print(self.hand)
+        # print("Prediction: " + str(prediction))
+        # print("Trump: " + str(trump))
         self.prediction = prediction
         return prediction
 
@@ -49,26 +49,26 @@ class RuleBasedAgent(player.Player):
         self.reward = reward
         self.score += reward
         self.hand = []
-        print("Wins: " + str(self.wins))
+        # print("Wins: " + str(self.wins))
 
     def play_card(self, trump, first, played, players, played_in_game):
-        print("Played:")
-        print(played)
+        # print("Played:")
+        # print(played)
         win_desirability = self.win_desirability(players)
-        print("Win Desirability: " + str(win_desirability))
+        # print("Win Desirability: " + str(win_desirability))
         best_card = self.get_playable_cards(first)[0]
         best_delta = abs(win_desirability - self.win_probability(played, best_card, trump, first, players))
-        print(self.get_playable_cards(first))
+        # print(self.get_playable_cards(first))
         for card in self.get_playable_cards(first):
             delta = abs(win_desirability - self.win_probability(played, card, trump, first, players))
             if delta < best_delta:
                 best_card = card
                 best_delta = delta
         win_likelihood = self.win_probability(played, best_card, trump, first, players)
-        print("Win Probability: " + str(self.win_probability(played, best_card, trump, first, players)))
-        print("Best Delta: " + str(best_delta))
-        print("Best Card: ")
-        print(best_card)
+        # print("Win Probability: " + str(self.win_probability(played, best_card, trump, first, players)))
+        # print("Best Delta: " + str(best_delta))
+        # print("Best Card: ")
+        # print(best_card)
         self.hand.remove(best_card)
         return best_card
 
@@ -91,7 +91,7 @@ class RuleBasedAgent(player.Player):
 
     def win_probability(self, played, card, trump, first, players):
         if first is None:
-            return self.number_of_stronger_cards_remaining(card, trump, first, played)/ (60 - len(played))
+            return ((60 - len(played)) - self.number_of_stronger_cards_remaining(card, trump, first, played))/ (60 - len(played))
         else:
             for other_card in played:
                 if self.stongest_card(other_card, card, trump, first) == other_card:
@@ -99,12 +99,12 @@ class RuleBasedAgent(player.Player):
             if len(played) == len(players) - 1:
                 return 1
             else:
-                return self.number_of_stronger_cards_remaining(card, trump, first, played)/ (60 - len(played))
+                return ((60 - len(played)) - self.number_of_stronger_cards_remaining(card, trump, first, played))/ (60 - len(played))
 
     def win_desirability(self, players):
         if (self.prediction - self.wins) >= len(self.hand):
             return 1
-        elif self.prediction < self.wins:
+        elif self.prediction <= self.wins:
             return 0
         else:
             desirability = (self.prediction - self.wins)/len(self.hand)

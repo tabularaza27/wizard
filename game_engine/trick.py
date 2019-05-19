@@ -55,15 +55,9 @@ class Trick(object):
 
             # determine if current player is new winner of the trick
             if winning_player is None or Trick.is_new_winner(new_card=played_card, old_card=winning_card, trump=self.trump_card, first_card=first_card):
-                print("******** New Winner")
                 winning_card = played_card
                 winning_player = player_index
             # print("First card:{}, Trump card:{}, Winning:{}".format(first_card,self.trump_card,winning_player))
-        print(trick_cards)
-        print(winning_card)
-        print("     Player " + str(winning_player + 1) + " wins")
-        for player in self.players:
-            print(player.wins)
         return winning_player, trick_cards
 
     @staticmethod
