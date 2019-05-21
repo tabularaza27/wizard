@@ -31,8 +31,8 @@ class TensorforcePPOAgent(TensorforceAgent):
     # 98% after 4k games, takes a bit after that
 
     def __init__(self):
-        super().__init__(agents.PPOAgent, networks.no_layer,
-            discount=0, name='TensorforcePPOAgent0Layer')
+        super().__init__(agents.PPOAgent, networks.default_2_layer,
+            discount=0)
 
 # Vanilla Policy Gradient
 class TensorforceVPGAgent(TensorforceAgent):
