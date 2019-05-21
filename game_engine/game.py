@@ -51,6 +51,7 @@ class Game:
             # print("Play Round No. {}".format(round_num))
             round = Round(round_num, self.players)
             score = round.play_round()
+            # print(len(round.played_cards))
             for i in range(self.num_players):
                 self.scores[i] += score[i]
             # print("Scores: {}".format(self.scores))

@@ -4,6 +4,7 @@
 The average points and win percentages are then printed."""
 
 import numpy as np
+from random import seed
 # This allows the file to be run in a test folder as opposed to having to be in the root directory
 import sys
 sys.path.append('../')
@@ -14,6 +15,7 @@ from game_engine import player
 
 # Can change the amount of games if you want
 games = 10000
+# seed(1)
 players = [player.AverageRandomPlayer() for _ in range(3)]
 players.append(RuleBasedAgent())
 sum_scores = np.zeros(4)
@@ -35,7 +37,7 @@ for i in range(games):
     wins[max_index] += 1
     # Aggregates the scores from all previous games
     sum_scores += scores
-
+print("Average Game Error: " + str(players[3].error/games))
 sum_scores /= games
 print("Average Scores (Player 4 is Rule Based Agent):")
 print(sum_scores)

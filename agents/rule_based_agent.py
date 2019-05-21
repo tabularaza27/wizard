@@ -1,56 +1,68 @@
-# import random
+import random
 import collections
+import numpy as np
 
 from game_engine import player
 
-
 class RuleBasedAgent(player.Player):
     """A computer player that makes decision on predefined rules.
-    Aims to resemble the performance and behaviour of that of a human."""
+    Aims to resemble the performance and behaviour of that of a human.
+    Agent functions by calculating the win desirability of the trick and the
+    win probability given the cards. It then makes a decision of what card based
+    on the probabilities."""
 
-    def __init__(self):
+    # Use this to print out a trick by trick breakdown of the state of the trick and
+    # the action and inferences of the rule-based agent
+    DEBUG = False
+
+    def __init__(self, aggression=0.0):
         super().__init__()
-        self.played = []
+        self.round = 1
+        self.num_players = 4
+        self.error = 0
+        # aggression is a measure of how high the agent naturally tries to predict. High aggression is good
+        # with weak opponents and low aggression for quality opponents. Takes values between -1 and 1.
+        self.aggression = self.bound(aggression, 1, -1)
 
     def get_prediction(self, trump, num_players):
         """
-        This algorithm predicts the amount of tricks that the player should win. It does this by using a weighted average between the
-        expected amount of tricks calculated as the amount of cards divide by the amount of players and another algorithm that assigns
-        an expected return for each card and sums all the expected returns together.
+        This algorithm predicts the amount of tricks that the player should win. It does this assigning
+        an expected return for each card and sums all the expected returns together. It also takes into
+        consideration the aggression of the agent.
         :param trump:
         :param num_players:
         :return: prediction:
         """
+        self.num_players = num_players
         self.played = []
-        weight = 0.7
+        self.error += (self.prediction - self.wins)
         prediction = 0
         for card in self.hand:
             if card.value == 14:
-                prediction += 0.95
+                prediction += 0.95 + (0.05 * self.aggression)
             elif card.color == trump:
-                if card.value > 10:
-                    prediction += 0.85
-                elif card.value > 5:
-                    prediction += 0.5
-                else:
-                    prediction += 0.35
+                prediction += (card.value * (0.050 + (0.005 * self.aggression))) + 0.3
             else:
-                if card.value > 10:
-                    prediction += 0.35
-                elif card.value > 5:
-                    prediction += 0.15
-                else:
-                    prediction += 0.1
-        prediction = weight * prediction + (1-weight) * len(self.hand) // num_players
+                prediction += (card.value * (0.030 + (0.005 * self.aggression)))
         prediction = round(self.bound(prediction,len(self.hand), 0), 0)
         self.prediction = prediction
         return prediction
 
     def announce_result(self, num_tricks_achieved, reward):
+        """
+        Occurs after each round, evaluating the score of the player and resetting round-based variables
+        :param num_tricks_achieved:
+        :param reward:
+        :return:
+        """
         self.wins = num_tricks_achieved
         self.reward = reward
         self.score += reward
         self.hand = []
+        if 60/self.num_players == self.round:
+            self.round = 1
+        else:
+            self.round += 1
 
     def play_card(self, trump, first, played, players, played_in_game):
         """
@@ -62,24 +74,54 @@ class RuleBasedAgent(player.Player):
         :param played_in_game:
         :return: best_card
         """
-        for card in played:
-            self.played.append(card)
         win_desirability = self.win_desirability(players)
         best_card = self.get_playable_cards(first)[0]
-        best_delta = abs(win_desirability - self.win_probability(played, best_card, trump, first, players))
+        best_delta = abs(win_desirability - self.win_probability(played, best_card, trump, first, players, played_in_game))
         best_win_likelihood = 0
+        round_winning_cards = []
+        # calculates the win probability for every playable card
         for card in self.get_playable_cards(first):
-            win_likelihood = self.win_probability(played, card, trump, first, players)
-            delta = abs(win_desirability - win_likelihood)
-            if delta < best_delta:
-                best_card = card
-                best_delta = delta
-            if win_likelihood > best_win_likelihood: best_win_likelihood = win_likelihood
+            if card != best_card:
+                win_likelihood = self.win_probability(played, card, trump, first, players, played_in_game)
+                if win_likelihood == 1: round_winning_cards.append(card)
+                delta = abs(win_desirability - win_likelihood)
+                # tries to find a card that minimizes the delta between the win desirability and the win probability
+                if delta < best_delta:
+                    best_card = card
+                    best_delta = delta
+                if win_likelihood > best_win_likelihood: best_win_likelihood = win_likelihood
         # If going to lose anyway then play the worst card (the one with the greatest number of stronger cards)
-        if win_likelihood == 0:
+        played_cards = played_in_game
+        if best_win_likelihood == 0:
+            if win_desirability > 0:
+                counter = 0
+                for card in self.get_playable_cards(first):
+                    number_of_stronger_cards = self.number_of_stronger_cards_remaining(card, trump, first, played_cards)
+                    if number_of_stronger_cards > counter:
+                        best_card = card
+                        counter = number_of_stronger_cards
+            else: # we want to get rid of our most valuable card
+                counter = 60
+                for card in self.get_playable_cards(first):
+                    number_of_stronger_cards = self.number_of_stronger_cards_remaining(card, trump, first, played_cards)
+                    if number_of_stronger_cards < counter:
+                        best_card = card
+                        counter = number_of_stronger_cards
+        elif len(round_winning_cards) > 1: # Play the weakest possible winning hand
             counter = 0
-            for card in self.get_playable_cards(first):
-                if self.number_of_stronger_cards_remaining(card, trump, first, played) > 0: best_card = card
+            for card in round_winning_cards:
+                number_of_stronger_cards = self.number_of_stronger_cards_remaining(card, trump, first, played_cards)
+                if number_of_stronger_cards > counter:
+                    best_card = card
+                    counter = number_of_stronger_cards
+        # debug output after each trick
+        if self.DEBUG:
+            print("\033[1;32;40mRound: " + str(self.round) + " | Trick: " + str(self.round - len(self.hand) + 1))
+            print("\033[1;37;40mPlayed: " + str(played) + " | Total Cards Played: " + str(len(played_in_game)))
+            print("Prediction: " + str(self.prediction) + " | Wins: " + str(self.wins))
+            print("Hand: " + str(self.hand) + " | Trump: " + str(trump))
+            print("Win Probability: " + str(self.win_probability(played, best_card, trump, first, players, played_in_game)) + " | Win Desirability: " + str(win_desirability))
+            print("Chosen Card: " + str(best_card) + " | " + str(self.number_of_stronger_cards_remaining(best_card, trump, first, played_in_game)))
         self.hand.remove(best_card)
         return best_card
 
@@ -96,11 +138,11 @@ class RuleBasedAgent(player.Player):
                 continue
             color_counter[color] += 1
         if not color_counter.most_common(1):
-            return super().get_trump_color()
+            return self.hand[random.randint(0,len(self.hand)-1)].color
         else:
             return color_counter.most_common(1)[0][0]
 
-    def win_probability(self, played, card, trump, first, players):
+    def win_probability(self, played, card, trump, first, players, played_in_game):
         """
         Given a card and the current state, this algorithm calculates the probability of winning by seeing if the card is
         stronger than those already played and estimates the chance that a stronger card will be played in the future.
@@ -111,16 +153,26 @@ class RuleBasedAgent(player.Player):
         :param players:
         :return: probability of winning
         """
-        if first is None:
-            return ((60 - len(played)) - self.number_of_stronger_cards_remaining(card, trump, first, played))/ (60 - len(played))
+        if first is None: # The probability I win is based only on the possibility that another agent has a
+            # stronger card and plays it
+            probability = ((61 - len(played_in_game) - len(self.hand)) -
+                           self.number_of_stronger_cards_remaining(card, trump, first, played_in_game))\
+                          / (61 - len(played_in_game) - len(self.hand))
+            return probability
         else:
             for other_card in played:
-                if self.stongest_card(other_card, card, trump, first) == other_card:
+                if self.round == (60 / len(players)): trump = first
+                # if there is a played card stronger than this card then the probability is instantly 0
+                if self.strongest_card(other_card, card, trump, first) == True:
                     return 0
             if len(played) == len(players) - 1:
+                # However if there is no stronger card and the agent is the last to play then the probability is 1
                 return 1
             else:
-                return ((60 - len(played)) - self.number_of_stronger_cards_remaining(card, trump, first, played))/ (60 - len(played))
+                # if not then calculate the probability as before (based on how many stronger cards remain
+                probability = ((61 - len(played_in_game) - len(self.hand)) - self.number_of_stronger_cards_remaining(card, trump, first, played_in_game))\
+                       / (61 - len(played_in_game) - len(self.hand))
+                return probability
 
     def win_desirability(self, players):
         """
@@ -134,10 +186,11 @@ class RuleBasedAgent(player.Player):
         elif self.prediction <= self.wins:
             return 0
         else:
-            desirability = (self.prediction - self.wins)/len(self.hand)
+            desirability = 1.3*(self.prediction - self.wins)/len(self.hand)
             for player in players:
                 if player != self:
                     desirability += (1/(len(players)+1))*(player.prediction - player.wins)/len(self.hand)
+            desirability += 0.1*np.cos((self.round - len(self.hand))*(np.pi/self.round))
             return self.bound(desirability, 1, 0)
 
     def bound(self, value, max, min):
@@ -155,87 +208,128 @@ class RuleBasedAgent(player.Player):
         else:
             return value
 
-    def cards_left_by_color(self, color):
+    def cards_left_by_color(self, color, target_card, played_in_game):
         """
         Keeps track of all cards played in that round and deduces how many cards of that color are left
         :param color:
+        :param card: removes this card from the counting procedure
         :return: number_of_cards_of_that_color_left
         """
-        trump_cards_left = []
-        for card in self.played:
+        all_cards_left = []
+        for card in played_in_game:
+            all_cards_left.append(card)
+        for card in self.hand:
+            all_cards_left.append(card)
+        all_cards_left.remove(target_card)
+        cards_by_color_left = []
+        for card in all_cards_left:
             if card.color == color:
-                trump_cards_left.append(card)
-        return trump_cards_left
+                cards_by_color_left.append(card)
+        return cards_by_color_left
 
-    def number_of_stronger_cards_remaining(self, card, trump, first, played):
+    def number_of_stronger_cards_remaining(self, card, trump, first, played_in_game):
         """
         Estimates the number of stronger cards remaining in the deck
         :param card:
         :param trump:
         :param first:
-        :param played:
+        :param played_in_game:
         :return: number of stronger cards
         """
-        counter = 0
-        if card.value == 14: return counter
-        played_trump_counter = 0
-        for played_card in self.cards_left_by_color(trump):
-            if played_card.value > card.value: played_trump_counter += 1
-        played_second_trump_counter = 0
+        if card.value == 14: return 0
+        if card.value == 0: return 61 - len(played_in_game) - len(self.hand)
+        played_wizard_counter = 0
+        played_trump_higher_counter = 0
+        played_trump_lower_counter = 0
+        played_second_trump_higher_counter = 0
+        played_second_trump_lower_counter = 0
+        played_remainder_counter = 0
+        for played_card in played_in_game:
+            if played_card.value == 14: played_wizard_counter += 1
+        for played_card in self.cards_left_by_color(trump.color, card, played_in_game):
+            if played_card.value > card.value:
+                played_trump_higher_counter += 1
+            else:
+                played_trump_lower_counter += 1
         if first is None:
             color = card.color
         else:
             color = first.color
-        for played_card in self.cards_left_by_color(color):
-            if played_card.value > card.value: played_second_trump_counter += 1
-        if card.color == trump:
-            return (13 - played_trump_counter - card.value) + 4
-        elif first is not None and card.color == first.color:
-            return (13 - played_second_trump_counter - card.value) + 17 - played_trump_counter
-        else:
-            return ((13 - card.value) * 2) + 30 - played_trump_counter - played_second_trump_counter
+        for played_card in self.cards_left_by_color(color, card, played_in_game):
+            if played_card.value > card.value:
+                played_second_trump_higher_counter += 1
+            else:
+                played_second_trump_lower_counter += 1
+        for other_color in ["Red", "Green", "Yellow", "Blue"]:
+            if other_color != trump and other_color != color:
+                for played_card in self.cards_left_by_color(other_color, card, played_in_game):
+                    if played_card.value > card.value: played_remainder_counter += 1
 
-    def stongest_card(self, card1, card2, trump, first):
-        """
-        Determines which card has precedence given the trump and the first card.
-        :param card1:
-        :param card2:
-        :param trump:
-        :param first:
-        :return: card1 or card2
-        """
-        if card1.value == 14:
-            return card1
-        if card2.value == 14:
-            return card2
-        if card1.color == trump:
-            if card2.color == trump:
-                if card1.value > card2.value:
-                    return card1
-                else:
-                    return card2
-            else:
-                return card1
-        elif first is not None and card1.color == first.color:
-            if card2.color == trump:
-                return card2
-            elif card2.color == first.color:
-                if card1.value > card2.value:
-                    return card1
-                else:
-                    return card2
-            else:
-                return card1
+        # If it is the last round then ignore trumps
+        if self.round == (60/self.num_players):
+            stronger_cards = (13 - played_second_trump_higher_counter - card.value) + (4 - played_wizard_counter)
+        # The amount of stronger cards is dependent on the amount of higher cards minus those already played
+        elif card.color == trump.color: # for trump colored card
+            stronger_cards = (13 - played_trump_higher_counter - card.value) + (4 - played_wizard_counter)
+        elif first is not None and card.color == first.color: # for a card that has the same colour as the first
+            stronger_cards = (13 - played_second_trump_higher_counter - card.value) + \
+                             (12 - played_trump_higher_counter - played_trump_lower_counter) + (4 - played_wizard_counter)
+        else: # if the color of the card is none of them
+            stronger_cards = (12 - played_trump_higher_counter - played_trump_lower_counter) + \
+                             (12 - played_second_trump_higher_counter - played_second_trump_lower_counter) + \
+                             (24 - played_remainder_counter - card.value*2) + (4 - played_wizard_counter)
+        # checks to see that the amount of stronger cards is not greater than the amount of cards already left
+        if stronger_cards > (61 - len(played_in_game) - len(self.hand)):
+            return (61 - len(played_in_game) - len(self.hand))
         else:
-            if card2.color == trump:
-                return card2
-            elif first is not None and card2.color == first.color:
-                return card2
+            return stronger_cards
+
+    def strongest_card(self, new_card, old_card, trump, first_card):
+        """Determines whether the new played card wins the trick
+
+        :param new_card: card that contests with current winning card
+        :param old_card: card currently winning the trick
+        :param trump:
+        :param first_card: first card played. Determines the suit of the trick. May be None
+        :return: bool: True if the new_card wins, taking into account trump colors, first_card color and order.
+        """
+
+        # If a Z was played first, it wins.
+        if old_card.value == 14:
+            return False
+        # If not and the new card is a Z, the new card wins.
+        if new_card.value == 14:
+            return True
+        # First N wins, so if the second card is N, it always wins.
+        if new_card.value == 0:
+            return False
+        # Second N wins only if new_card is NOT N.
+        elif old_card.value == 0:
+            return True
+        # If they are both colored cards, the trump color wins.
+        if old_card.color == trump.color:
+            if new_card.color != trump.color:
+                return False
+            else:  # If both are trump color, the higher value wins.
+                return old_card.value < new_card.value
+        else:
+            # old_card is not trump color, then if new_card is, new_card wins
+            if new_card.color == trump.color:
+                return True
             else:
-                if card1.value > card2.value:
-                    return card1
-                else:
-                    return card2
+                # Neither are trump color, so check for first color.
+                if old_card.color == first_card.color:
+                    if new_card.color != first_card.color:
+                        # old card is first_card color but new card is not, old wins.
+                        return False
+                    else:
+                        # Both are first_card color, bigger value wins.
+                        return old_card.value < new_card.value
+
+
+
+
+
 
 
 
