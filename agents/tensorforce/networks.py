@@ -1,3 +1,5 @@
+"""Describes networks in tensorforce specification for use in multiple agents"""
+
 from agents.rl_agent import STATE_DIMENSIONS, ACTION_DIMENSIONS
 
 no_layer = []

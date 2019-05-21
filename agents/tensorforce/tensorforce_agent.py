@@ -3,7 +3,29 @@ import os
 from agents import rl_agent
 
 class TensorforceAgent(rl_agent.RLAgent):
+    """Base class for all agents which use tensorforce-agents internally.
+
+    Attributes:
+        agent (tensorforce.agents.agent.Agent):
+            The tensorforce algorithm to use for this specific agent
+        agent_model_path (str): The directory where all the files
+            for the tensorforce agent model will be saved
+    """
+
     def __init__(self, TFAgent, network, name=None, **kwargs):
+        """
+
+        Args:
+            TFAgent (tensorforce.agents.agent.Agent):
+                The tensorforce algorithm to use for this specific agent
+            network ([dict]): A list of layers in tensorforce layout
+                used for the agents network
+            name (str): Name of this agent. Used e.g. for determining
+                the path where predictor & agent models will be saved
+            **kwargs: Additional arguments passed to the TFAgent on
+                initialization (e.g. discount)
+        """
+
         super().__init__(name)
 
         self.agent = TFAgent(
