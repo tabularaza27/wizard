@@ -9,6 +9,7 @@ import sys
 sys.path.append('../')
 
 import tensorflow as tf
+import os
 from game_engine.game import Game
 from agents.tensorforce.algorithms import TensorforcePPOAgent1L
 from game_engine.player import AverageRandomPlayer
@@ -17,6 +18,9 @@ import tensorboard.program
 import tensorboard.default
 
 sess = tf.InteractiveSession()
+
+if not os.path.exists('logs/'):
+    os.makedirs('logs/')
 
 file_writer = tf.summary.FileWriter('logs/', sess.graph)
 
