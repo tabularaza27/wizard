@@ -17,6 +17,16 @@ from agents.tensorforce import networks
 # and increase it once the agents actually learned to play only valid cards
 # (Though the default one of 0.99 is too high for a game which takes max 15 tricks)
 
+# 1 Layer Proximal Policy Optimization
+class TensorforcePPOAgent1L(TensorforceAgent):
+    def build_agent(self, states, actions):
+        return agents.PPOAgent(
+            states,
+            actions,
+            networks.default_single_layer,
+            discount=0
+        )
+
 # 2 Layer Proximal Policy Optimization
 class TensorforcePPOAgent2L(TensorforceAgent):
     def build_agent(self, states, actions):
