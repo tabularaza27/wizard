@@ -4,6 +4,9 @@
 
 from random import seed
 import numpy as np
+# This allows the file to be run in a test folder as opposed to having to be in the root directory
+import sys
+sys.path.append('../')
 
 from game_engine.game import Game
 from agents.tensorforce.algorithms import TensorforcePPOAgent1L

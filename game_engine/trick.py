@@ -58,6 +58,7 @@ class Trick(object):
                 winning_card = played_card
                 winning_player = player_index
             # print("First card:{}, Trump card:{}, Winning:{}".format(first_card,self.trump_card,winning_player))
+
         return winning_player, trick_cards
 
     @staticmethod

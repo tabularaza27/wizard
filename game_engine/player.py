@@ -65,9 +65,10 @@ class Player:
         raise NotImplementedError("This needs to be implemented by your Player class")
 
     def announce_result(self, num_tricks_achieved, reward):
-        self.num_tricks_achieved = num_tricks_achieved
+        self.wins = num_tricks_achieved
         self.reward = reward
         self.score += reward
+        self.hand = []
 
     def get_state(self):
         return self.score, self.wins, self.prediction
@@ -145,7 +146,7 @@ class AverageRandomPlayer(RandomPlayer):
         return prediction
 
     def get_trump_color(self):
-        """Determines trump color by choosing the color the agent has the most og in its hand
+        """Determines trump color by choosing the color the agent has the most of in its hand
 
         Returns:
             str: color of trump
