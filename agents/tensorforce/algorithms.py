@@ -17,47 +17,32 @@ from agents.tensorforce import networks
 # and increase it once the agents actually learned to play only valid cards
 # (Though the default one of 0.99 is too high for a game which takes max 15 tricks)
 
-# Proximal Policy Optimization
-class TensorforcePPOAgent(TensorforceAgent):
-    def __init__(self):
-        super().__init__(agents.PPOAgent, networks.default_2_layer,
-            discount=0)
+# 2 Layer Proximal Policy Optimization
+class TensorforcePPOAgent2L(TensorforceAgent):
+    def build_agent(self, states, actions):
+        return agents.PPOAgent(
+            states,
+            actions,
+            networks.default_2_layer,
+            discount=0
+        )
 
-# Vanilla Policy Gradient
-class TensorforceVPGAgent(TensorforceAgent):
-    def __init__(self):
-        super().__init__(agents.VPGAgent,
-            networks.default_2_layer, discount=0)
+# 2 Layer Vanilla Policy Gradient
+class TensorforceVPGAgent2L(TensorforceAgent):
+    def build_agent(self, states, actions):
+        return agents.VPGAgent(
+            states,
+            actions,
+            networks.default_2_layer,
+            discount=0
+        )
 
-# Deep-Q-Networks
-class TensorforceDQNAgent(TensorforceAgent):
-    def __init__(self):
-        super().__init__(agents.DQNAgent,
-            networks.default_2_layer, discount=0)
-
-# Deep-Q-learning from demonstration
-class TensorforceDQFDAgent(TensorforceAgent):
-    def __init__(self):
-        super().__init__(agents.DQFDAgent,
-            networks.default_2_layer, discount=0)
-
-# The following agents do not work yet and throw some exception when used
-
-# Normalized Advantage Functions
-class TensorforceNAFAgent(TensorforceAgent):
-    # TensorForceError("Only unconstrained float actions valid for NAFModel.")
-    # Haven't read about this yet but might not be what we want given that error
-
-    def __init__(self):
-        super().__init__(agents.NAFAgent,
-            networks.default_2_layer, discount=0)
-
-# Trust Region Policy Optimization
-class TensorforceTRPOAgent(TensorforceAgent):
-    # Throws some exception. Haven't looked that much into detail
-    # and it seems like PPO performs at least as good as this one in general
-    # so maybe we don't even have to try it out
-
-    def __init__(self):
-        super().__init__(agents.TRPOAgent,
-            networks.default_2_layer, discount=0)
+# 2 Layer Deep-Q-Networks
+class TensorforceDQNAgent2L(TensorforceAgent):
+    def build_agent(self, states, actions):
+        return agents.DQNAgent(
+            states,
+            actions,
+            networks.default_2_layer,
+            discount=0
+        )

@@ -6,12 +6,12 @@ from random import seed
 import numpy as np
 
 from game_engine.game import Game
-from agents.tensorforce.algorithms import TensorforcePPOAgent
+from agents.tensorforce.algorithms import TensorforcePPOAgent2L
 from game_engine.player import AverageRandomPlayer
 
 games = 2000
 seed(2)
-players = [TensorforcePPOAgent(), AverageRandomPlayer(),
+players = [TensorforcePPOAgent2L(), AverageRandomPlayer(),
     AverageRandomPlayer(), AverageRandomPlayer()]
 scores = []
 for i in range(games):
