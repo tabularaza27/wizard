@@ -6,27 +6,19 @@ from random import seed
 import numpy as np
 
 from game_engine.game import Game
-from agents.original.rl_agents import OriginalRLAgent
-from game_engine import player
-
+from agents.tensorforce.algorithms import TensorforcePPOAgent1L
+from game_engine.player import AverageRandomPlayer
 
 games = 2000
 seed(2)
-players = [OriginalRLAgent()]
-# players[0].load_estimator()
-for rl_player in range(1):
-    players.append(OriginalRLAgent(
-        estimator=players[0].estimator,
-        predictor=players[0].predictor))
-players.append(player.AverageRandomPlayer())
-players.append(player.RandomPlayer())
+players = [TensorforcePPOAgent1L(), AverageRandomPlayer(),
+    AverageRandomPlayer(), AverageRandomPlayer()]
 scores = []
 for i in range(games):
     if i % 100 == 0:
         print("{}/{}".format(i, games))
     wiz = Game(players=players)
     scores.append(wiz.play_game())
-players[0].save_estimator()
-players[0].predictor.save_model()
+players[0].save_models()
 scores = np.array(scores)
 print("Done")
