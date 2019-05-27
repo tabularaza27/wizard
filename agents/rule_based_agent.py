@@ -15,11 +15,15 @@ class RuleBasedAgent(player.Player):
     # the action and inferences of the rule-based agent
     DEBUG = False
 
-    def __init__(self, aggression=0.0):
+    def __init__(self, name = None, aggression=0.0):
         super().__init__()
         self.round = 1
         self.num_players = 4
         self.error = 0
+        if name is not None:
+            self.name = name
+        else:
+            self.name = self.__class__.__name__
         # aggression is a measure of how high the agent naturally tries to predict. High aggression is good
         # with weak opponents and low aggression for quality opponents. Takes values between -1 and 1.
         self.aggression = self.bound(aggression, 1, -1)

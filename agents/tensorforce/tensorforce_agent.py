@@ -25,7 +25,10 @@ class TensorforceAgent(rl_agent.RLAgent):
         self.agent_model_path = os.path.join(rl_agent.MODELS_PATH,
             self.name, 'Agent/')
         if os.path.exists(self.agent_model_path):
-            self.agent.restore_model(self.agent_model_path)
+            try:
+                self.agent.restore_model(self.agent_model_path)
+            except:
+                print("Agent's model is empty")
         else:
             os.makedirs(self.agent_model_path)
 

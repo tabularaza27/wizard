@@ -7,6 +7,8 @@ import tensorflow.keras as K
 from agents.original.featurizers import OriginalFeaturizer
 from game_engine.card import Card
 
+logdir = '/logs'
+
 class Predictor:
     """Predictor object, predicts the number of tricks achieved in a round.
 
@@ -44,6 +46,8 @@ class Predictor:
         self.y_batch = np.zeros((train_batch_size, self.y_dim))
         self.batch_position = 0
         self.train_batch_size = train_batch_size
+
+        # self.tensorboard_callback = K.callbacks.TensorBoard(log_dir=logdir)
 
         self.model_path = model_path + str(max_num_tricks) + '.h5'
         if os.path.isfile(self.model_path):
