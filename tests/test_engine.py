@@ -1,6 +1,8 @@
 from game_engine.game import Game
 from game_engine.player import RandomPlayer
 import time
+import sys
+sys.path.append('../')
 
 
 games = 5000

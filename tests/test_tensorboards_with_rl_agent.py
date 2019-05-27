@@ -10,30 +10,37 @@ sys.path.append('../')
 
 import tensorflow as tf
 import os
+import threading
 from game_engine.game import Game
 from agents.tensorforce.algorithms import TensorforcePPOAgent1L
 from game_engine.player import AverageRandomPlayer
-import tensorboard as tb
-import tensorboard.program
-import tensorboard.default
 
 sess = tf.InteractiveSession()
 
-if not os.path.exists('logs/'):
-    os.makedirs('logs/')
+test_count = 1
 
-file_writer = tf.summary.FileWriter('logs/', sess.graph)
+players = [TensorforcePPOAgent1L(), AverageRandomPlayer(),
+    AverageRandomPlayer(), AverageRandomPlayer()]
+
+path = 'logs/' + players[0].name + '/test_'
+
+# Create a new path for logging the evaluation data
+while os.path.exists(path + str(test_count)):
+    test_count+=1
+os.makedirs(path + str(test_count))
+
+# Create a new log file in the selected path
+file_writer = tf.summary.FileWriter(path + str(test_count), sess.graph)
 
 tf.global_variables_initializer().run()
 
-# tb.program.FLAGS.logdir = '/logs'
-# tb.program.main(tb.default.get_plugins(),
-#                 tb.default.get_assets_zip_provider())
+# Run the tensorboard in a separate thread
+t = threading.Thread(target=launchTensorBoard, args=([]))
+t.start()
 
 games = 2000
 # seed(2)
-players = [TensorforcePPOAgent1L(), AverageRandomPlayer(),
-    AverageRandomPlayer(), AverageRandomPlayer()]
+
 scores = []
 for i in range(games):
     if i % 100 == 0:
@@ -47,3 +54,7 @@ for i in range(games):
 players[0].save_models()
 scores = np.array(scores)
 print("Done")
+
+def launchTensorBoard():
+    os.system('tensorboard --logdir=' + path + str(test_count))
+    return

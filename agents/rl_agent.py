@@ -11,7 +11,7 @@ from game_engine.card import Card
 
 STATE_DIMENSIONS = 180
 ACTION_DIMENSIONS = 4 * 13 + 2
-MODELS_PATH = 'tests/models/'
+MODELS_PATH = 'models/'
 
 class RLAgent(AverageRandomPlayer):
     """Abstract RL Agent. Should be extended specific for each library.
