@@ -31,10 +31,29 @@ class TensorforcePPOAgent1L(TensorforceAgent):
 class TensorforcePPOAgent2L(TensorforceAgent):
     def build_agent(self, states, actions):
         return agents.PPOAgent(
-            states,
-            actions,
-            networks.default_2_layer,
-            discount=0
+            states=states,
+            actions=actions,
+            network=networks.default_2_layer,
+            discount=0,
+            step_optimizer=dict(type='adam', learning_rate=1e-5),
+            baseline_mode='network',
+            baseline=dict(type='custom', network=networks.default_2_layer),
+            baseline_optimizer=dict(type='adam', learning_rate=1e-5),
+        )
+
+# 3 Layer Proximal Policy Optimization
+class TensorforcePPOAgent3L(TensorforceAgent):
+    def build_agent(self, states, actions):
+        net = networks.equal_spacing(3)
+        return agents.PPOAgent(
+            states=states,
+            actions=actions,
+            network=net,
+            discount=0,
+            step_optimizer=dict(type='adam', learning_rate=1e-5),
+            baseline_mode='network',
+            baseline=dict(type='custom', network=net),
+            baseline_optimizer=dict(type='adam', learning_rate=1e-5),
         )
 
 # 2 Layer Vanilla Policy Gradient
