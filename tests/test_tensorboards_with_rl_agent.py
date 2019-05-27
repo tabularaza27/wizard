@@ -12,6 +12,7 @@ import tensorflow as tf
 import os
 import threading
 from game_engine.game import Game
+from agents.rl_agent import RLAgent
 from agents.tensorforce.algorithms import TensorforcePPOAgent1L
 from game_engine.player import AverageRandomPlayer
 from agents.rule_based_agent import RuleBasedAgent
@@ -35,7 +36,10 @@ file_writer_p2 = tf.summary.FileWriter(path + str(test_count) + '/' + players[1]
 file_writer_p3 = tf.summary.FileWriter(path + str(test_count) + '/' + players[2].__class__.__name__ + '_p3', sess.graph)
 file_writer_p4 = tf.summary.FileWriter(path + str(test_count) + '/' + players[3].__class__.__name__ + '_p4', sess.graph)
 
+file_writers = [file_writer_p1, file_writer_p2, file_writer_p3, file_writer_p4]
+
 tf.global_variables_initializer().run()
+
 
 def launchTensorBoard():
     os.system('tensorboard --logdir=' + path + str(test_count))
@@ -50,31 +54,24 @@ games = 2000
 
 scores = []
 for i in range(games):
-    # if i % 100 == 0:
-    #     print("{}/{}".format(i, games))
+    # print("{}/{}".format(i, games))
     wiz = Game(players=players)
     score = wiz.play_game()
-    summary = tf.Summary()
-    summary.value.add(tag="Score", simple_value = score[0])
-    # summary.value.add(tag="Valid Rate", simple_value = players[0].valid_rate)
-    file_writer_p1.add_summary(summary, i)
-    file_writer_p1.flush()
-    summary = tf.Summary()
-    summary.value.add(tag="Score", simple_value=score[1])
-    # summary.value.add(tag="Valid Rate", simple_value=players[1].valid_rate)
-    file_writer_p2.add_summary(summary, i)
-    file_writer_p2.flush()
-    summary = tf.Summary()
-    summary.value.add(tag="Score", simple_value=score[2])
-    # summary.value.add(tag="Valid Rate", simple_value=players[2].valid_rate)
-    file_writer_p3.add_summary(summary, i)
-    file_writer_p3.flush()
-    summary = tf.Summary()
-    summary.value.add(tag="Score", simple_value=score[3])
-    # summary.value.add(tag="Valid Rate", simple_value=players[3].valid_rate)
-    file_writer_p4.add_summary(summary, i)
-    file_writer_p4.flush()
+    #if i % 100 == 0:
+    # loop through players and write values to disk for tensorboard use
+    # ToDo do this only every x games, calculate average for scores
+    for index, player in enumerate(players):
+        summary = tf.Summary()
+        summary.value.add(tag="Score", simple_value=score[index])
+        # ToDo add valid rate calculation to rule based player
+        # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
+        if isinstance(players[index], RLAgent):
+           summary.value.add(tag="Valid Rate", simple_value=players[index].valid_rate)
+
+        file_writers[index].add_summary(summary, i)
+        file_writers[index].flush()
     scores.append(score)
+# ToDo save model of best performing RL Agent
 players[0].save_models()
 scores = np.array(scores)
 print("Done")
