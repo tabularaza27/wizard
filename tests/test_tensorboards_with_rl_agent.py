@@ -13,7 +13,7 @@ import os
 import threading
 from game_engine.game import Game
 from agents.rl_agent import RLAgent
-from agents.tensorforce.algorithms import TensorforcePPOAgent1L
+from agents.tensorforce.algorithms import TensorforcePPOAgent1L, TensorforcePPOAgent3L
 from game_engine.player import AverageRandomPlayer
 from agents.rule_based_agent import RuleBasedAgent
 
@@ -43,8 +43,8 @@ def calculate_win_percentage(scores):
 
 test_count = 1
 report_after_games = 100
-games = 2000
-players = [TensorforcePPOAgent1L(), TensorforcePPOAgent1L(),
+games = 20000
+players = [TensorforcePPOAgent1L(), TensorforcePPOAgent3L(),
            RuleBasedAgent(), AverageRandomPlayer()]
 # seed(2)
 
@@ -91,7 +91,9 @@ for i in range(games):
             summary.value.add(tag="Win Percentage", simple_value=win_percentage[index])
             # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
             if isinstance(players[index], RLAgent):
-               summary.value.add(tag="Valid Rate", simple_value=players[index].valid_rate)
+                summary.value.add(tag="Valid Rate", simple_value=players[index].valid_rate)
+                summary.value.add(tag="Predictor Loss", simple_value=players[index].predictor.current_loss)
+                summary.value.add(tag="Predictor Acc", simple_value=players[index].predictor.current_acc)
 
             file_writers[index].add_summary(summary, i)
             file_writers[index].flush()
