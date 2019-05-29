@@ -90,13 +90,13 @@ for i in range(games):
         # loop through players and write values to disk for tensorboard use
         for index, player in enumerate(players):
             summary = tf.Summary()
-            summary.value.add(tag="Score", simple_value=average_score[index])
-            summary.value.add(tag="Win Percentage", simple_value=win_percentage[index])
+            summary.value.add(tag="C) Score", simple_value=average_score[index])
+            summary.value.add(tag="A) Win Percentage", simple_value=win_percentage[index])
             # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
             if isinstance(players[index], RLAgent):
-                summary.value.add(tag="Valid Rate", simple_value=players[index].valid_rate)
-                summary.value.add(tag="Predictor Loss", simple_value=players[index].predictor.current_loss)
-                summary.value.add(tag="Predictor Acc", simple_value=players[index].predictor.current_acc)
+                summary.value.add(tag="B) Valid Rate", simple_value=players[index].valid_rate)
+                summary.value.add(tag="E) Predictor Loss", simple_value=players[index].predictor.current_loss)
+                summary.value.add(tag="D) Predictor Acc", simple_value=players[index].predictor.current_acc)
 
             file_writers[index].add_summary(summary, i)
             file_writers[index].flush()
