@@ -7,6 +7,7 @@ import tensorflow.keras as K
 from agents.original.featurizers import OriginalFeaturizer
 from game_engine.card import Card
 
+
 class Predictor:
     """Predictor object, predicts the number of tricks achieved in a round.
 
@@ -15,6 +16,7 @@ class Predictor:
             - 4 * 13 = 52 for numbered color cards
             - 2 for wizards & jesters
             - 5 for trump colors (4 colors + no trump)
+            - 1 for the prediction
         max_num_tricks (int): Determines the output shape of the NN and
             therefore restricts the possible number of tricks
             which can be predicted
@@ -32,18 +34,24 @@ class Predictor:
         model (keras.models.Model): The NN
     """
 
-    x_dim = 59
+    x_dim = 60
 
     def __init__(self, model_path='prediction_model', max_num_tricks=15,
-            train_batch_size=1000):
+                 train_batch_size=1000, train_step=300):
         self.max_num_tricks = max_num_tricks
         self.y_dim = self.max_num_tricks + 1
         self._build_prediction_to_expected_num_points_matrix()
+
+        self.train_step = train_step
+        self.buffer_filled = False
 
         self.x_batch = np.zeros((train_batch_size, Predictor.x_dim))
         self.y_batch = np.zeros((train_batch_size, self.y_dim))
         self.batch_position = 0
         self.train_batch_size = train_batch_size
+
+        self.predictions = []
+        self.prediction_differences = []
 
         self.model_path = model_path + str(max_num_tricks) + '.h5'
         if os.path.isfile(self.model_path):
@@ -77,13 +85,13 @@ class Predictor:
         ])
 
         self.model.compile(optimizer=K.optimizers.Adam(),
-            loss='categorical_crossentropy', metrics=['accuracy'])
+                           loss='categorical_crossentropy', metrics=['accuracy'])
 
     def save_model(self):
         self.model.save(self.model_path)
 
     def make_prediction(self, initial_cards: List[Card],
-            trump_color_card: Card) -> Tuple[np.ndarray, int]:
+                        trump_color_card: Card) -> Tuple[np.ndarray, int]:
         """Predict the number of tricks based on initial cards + trump color.
 
         Args:
@@ -99,11 +107,19 @@ class Predictor:
 
         x = np.array(OriginalFeaturizer.cards_to_arr(initial_cards) +
                      OriginalFeaturizer.color_to_bin_arr(trump_color_card))
-        probability_distribution = self.model.predict(
-            x.reshape(1, Predictor.x_dim)).T
-        expected_num_points = self.prediction_to_points \
-            @ probability_distribution
-        return x, np.argmax(expected_num_points)
+
+        X = np.tile(x, (self.y_dim, 1))
+        trick_values = np.arange(self.y_dim).reshape(self.y_dim, 1)
+        X = np.hstack([X, trick_values])
+
+        probability_distributions = self.model.predict(X)
+
+        # dot product between same rows of both matrices
+        expected_value = (self.prediction_to_points * probability_distributions).sum(axis=1)
+
+        self.prediction = int(np.argmax(expected_value))
+        self.predictions.append(self.prediction)
+        return x, self.prediction
 
     def add_game_result(self, x: np.ndarray, num_tricks_achieved: int):
         """Adds the corresponding label to the cards & trump color in x.
@@ -118,13 +134,22 @@ class Predictor:
                 after the round which corresponds to the one
                 passed to make_prediction before. Used as a label.
         """
-
         y = K.utils.to_categorical(num_tricks_achieved, num_classes=self.y_dim)
+
+        self.prediction_differences.append(abs(self.prediction - num_tricks_achieved))
+
+        x = np.append(x, [self.prediction])
 
         self.x_batch[self.batch_position] = x
         self.y_batch[self.batch_position] = y
         self.batch_position += 1
 
-        if self.batch_position == self.train_batch_size - 1:
+        if self.buffer_filled and self.batch_position % self.train_step == 0:
             self.model.fit(self.x_batch, self.y_batch)
+
+        if self.batch_position == self.train_batch_size - 1:
+            self.buffer_filled = True
             self.batch_position = 0
+            print("Mean Prediction: ", np.mean(self.predictions))
+            print("Std Prediction: ", np.std(self.predictions))
+            print("Abs Prediction difference: ", np.mean(self.prediction_differences))
