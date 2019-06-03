@@ -32,12 +32,14 @@ class Predictor:
         model_path (str): The path to the file where the parameters etc.
             of the NN are stored
         model (keras.models.Model): The NN
+        train_step (int): How many samples should be recorded before a training step is executed.
+        verbose (bool): Determines if information about the prediction performance should be printed
     """
 
     x_dim = 60
 
     def __init__(self, model_path='prediction_model', max_num_tricks=15,
-                 train_batch_size=1000, train_step=300):
+                 train_batch_size=1000, train_step=300, verbose=False):
         self.max_num_tricks = max_num_tricks
         self.y_dim = self.max_num_tricks + 1
         self._build_prediction_to_expected_num_points_matrix()
@@ -49,15 +51,22 @@ class Predictor:
         self.y_batch = np.zeros((train_batch_size, self.y_dim))
         self.batch_position = 0
         self.train_batch_size = train_batch_size
-
-        self.predictions = []
-        self.prediction_differences = []
+        self.verbose = verbose
 
         self.model_path = model_path + str(max_num_tricks) + '.h5'
         if os.path.isfile(self.model_path):
             self.model = K.models.load_model(self.model_path)
         else:
             self._build_new_model()
+
+        # stores the predictions made by the predictor (statistics)
+        self._predictions = []
+
+        # stores the absolute difference to the predictions (statistics)
+        self._prediction_differences = []
+
+        self._prediction = None
+
 
     def _build_prediction_to_expected_num_points_matrix(self):
         # We can describe the calculation from the output of the NN
@@ -117,9 +126,9 @@ class Predictor:
         # dot product between same rows of both matrices
         expected_value = (self.prediction_to_points * probability_distributions).sum(axis=1)
 
-        self.prediction = int(np.argmax(expected_value))
-        self.predictions.append(self.prediction)
-        return x, self.prediction
+        self._prediction = int(np.argmax(expected_value))
+        self._predictions.append(self._prediction)
+        return x, self._prediction
 
     def add_game_result(self, x: np.ndarray, num_tricks_achieved: int):
         """Adds the corresponding label to the cards & trump color in x.
@@ -135,21 +144,24 @@ class Predictor:
                 passed to make_prediction before. Used as a label.
         """
         y = K.utils.to_categorical(num_tricks_achieved, num_classes=self.y_dim)
-
-        self.prediction_differences.append(abs(self.prediction - num_tricks_achieved))
-
-        x = np.append(x, [self.prediction])
+        self._prediction_differences.append(abs(self._prediction - num_tricks_achieved))
+        x = np.append(x, [self._prediction])
 
         self.x_batch[self.batch_position] = x
         self.y_batch[self.batch_position] = y
         self.batch_position += 1
 
+        # Train when train_step samples were reached
         if self.buffer_filled and self.batch_position % self.train_step == 0:
             self.model.fit(self.x_batch, self.y_batch)
 
         if self.batch_position == self.train_batch_size - 1:
             self.buffer_filled = True
             self.batch_position = 0
-            print("Mean Prediction: ", np.mean(self.predictions))
-            print("Std Prediction: ", np.std(self.predictions))
-            print("Abs Prediction difference: ", np.mean(self.prediction_differences))
+
+            if self.verbose:
+                print("Mean Prediction: ", np.mean(self._predictions))
+                print("Std Prediction: ", np.std(self._predictions))
+                print("Abs Prediction difference: ", np.mean(self._prediction_differences))
+            self._predictions = []
+            self._prediction_differences = []
