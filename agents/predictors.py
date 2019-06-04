@@ -36,18 +36,19 @@ class Predictor:
         verbose (bool): Determines if information about the prediction performance should be printed
     """
 
-    x_dim = 60
-
     def __init__(self, model_path='prediction_model', max_num_tricks=15,
-                 train_batch_size=1000, train_step=300, verbose=False):
+                 train_batch_size=1000, train_step=300, verbose=True):
         self.max_num_tricks = max_num_tricks
+
         self.y_dim = self.max_num_tricks + 1
+        self.x_dim = 59 + max_num_tricks + 1
+
         self._build_prediction_to_expected_num_points_matrix()
 
         self.train_step = train_step
         self.buffer_filled = False
 
-        self.x_batch = np.zeros((train_batch_size, Predictor.x_dim))
+        self.x_batch = np.zeros((train_batch_size, self.x_dim))
         self.y_batch = np.zeros((train_batch_size, self.y_dim))
         self.batch_position = 0
         self.train_batch_size = train_batch_size
@@ -64,9 +65,6 @@ class Predictor:
 
         # stores the absolute difference to the predictions (statistics)
         self._prediction_differences = []
-
-        self._prediction = None
-
 
     def _build_prediction_to_expected_num_points_matrix(self):
         # We can describe the calculation from the output of the NN
@@ -89,7 +87,11 @@ class Predictor:
 
     def _build_new_model(self):
         self.model = K.Sequential([
-            K.layers.Dense(32, input_dim=Predictor.x_dim, activation='relu'),
+            K.layers.Dense(128, input_dim=self.x_dim, activation='relu'),
+            K.layers.BatchNormalization(),
+            K.layers.Dense(64, activation='relu'),
+            K.layers.BatchNormalization(),
+            K.layers.Dense(32, activation='relu'),
             K.layers.Dense(self.y_dim, activation='softmax')
         ])
 
@@ -118,7 +120,9 @@ class Predictor:
                      OriginalFeaturizer.color_to_bin_arr(trump_color_card))
 
         X = np.tile(x, (self.y_dim, 1))
-        trick_values = np.arange(self.y_dim).reshape(self.y_dim, 1)
+
+        trick_values = K.utils.to_categorical(np.arange(self.y_dim), num_classes=self.y_dim)
+
         X = np.hstack([X, trick_values])
 
         probability_distributions = self.model.predict(X)
@@ -126,9 +130,13 @@ class Predictor:
         # dot product between same rows of both matrices
         expected_value = (self.prediction_to_points * probability_distributions).sum(axis=1)
 
-        self._prediction = int(np.argmax(expected_value))
-        self._predictions.append(self._prediction)
-        return x, self._prediction
+        prediction = int(np.argmax(expected_value))
+        self._predictions.append(prediction)
+
+        prediction_encoded = K.utils.to_categorical(prediction, num_classes=self.y_dim)
+        x = np.append(x, prediction_encoded)
+
+        return x, prediction
 
     def add_game_result(self, x: np.ndarray, num_tricks_achieved: int):
         """Adds the corresponding label to the cards & trump color in x.
@@ -144,8 +152,10 @@ class Predictor:
                 passed to make_prediction before. Used as a label.
         """
         y = K.utils.to_categorical(num_tricks_achieved, num_classes=self.y_dim)
-        self._prediction_differences.append(abs(self._prediction - num_tricks_achieved))
-        x = np.append(x, [self._prediction])
+
+        prediction_encoded = x[-self.y_dim:]
+        prediction = np.argmax(prediction_encoded)
+        self._prediction_differences.append(abs(prediction - num_tricks_achieved))
 
         self.x_batch[self.batch_position] = x
         self.y_batch[self.batch_position] = y
