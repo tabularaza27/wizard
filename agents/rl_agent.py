@@ -58,6 +58,7 @@ class RLAgent(AverageRandomPlayer):
         # were actually valid cards -> gives us an estimate on how good the agent
         # actually understands the rules
         self.last_10000_cards_played_valid = []
+        self.valid_rate = 0
 
     def save_models(self):
         self.predictor.save_model()
@@ -83,7 +84,7 @@ class RLAgent(AverageRandomPlayer):
         # TODO replace this print with the corresponding plotting once
         # implemented to keep track of how many valid cards the agent plays
         if len(self.last_10000_cards_played_valid) == 10000:
-            print('valid', np.mean(self.last_10000_cards_played_valid))
+            self.valid_rate = np.mean(self.last_10000_cards_played_valid)
             self.last_10000_cards_played_valid = []
 
         if self.not_yet_given_reward is not None:

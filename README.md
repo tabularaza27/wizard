@@ -1,4 +1,4 @@
-# Wizard RL Engin
+# Wizard RL Engine
 
 #### Setup
 Activate the virualenv: \

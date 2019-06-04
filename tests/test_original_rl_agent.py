@@ -9,17 +9,18 @@ import sys
 sys.path.append('../')
 
 from game_engine.game import Game
-from agents.tensorforce.algorithms import TensorforcePPOAgent1L
+from agents.tensorforce.algorithms import TensorforcePPOAgent3L
 from game_engine.player import AverageRandomPlayer
 
-games = 2000
+games = 10000000
 seed(2)
-players = [TensorforcePPOAgent1L(), AverageRandomPlayer(),
+players = [TensorforcePPOAgent3L(), AverageRandomPlayer(),
     AverageRandomPlayer(), AverageRandomPlayer()]
 scores = []
 for i in range(games):
     if i % 100 == 0:
         print("{}/{}".format(i, games))
+        players[0].save_models()
     wiz = Game(players=players)
     scores.append(wiz.play_game())
 players[0].save_models()
