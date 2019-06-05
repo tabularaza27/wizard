@@ -173,7 +173,7 @@ class Predictor:
             self.model.fit(self.x_batch, self.y_batch)
             history = self.model.fit(self.x_batch, self.y_batch)
             # update predictors values of loss and acc --> used for tensorforce reporting
-            self.current_acc = history.history['acc'][0]
+            self.current_acc = history.history['accuracy'][0]
             self.current_loss = history.history['loss'][0]
 
         if self.batch_position == self.train_batch_size - 1:

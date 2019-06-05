@@ -36,7 +36,7 @@ class RLAgent(AverageRandomPlayer):
             which is what this variable is for
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, predictor=None):
         super().__init__()
 
         if name is not None:
@@ -47,7 +47,11 @@ class RLAgent(AverageRandomPlayer):
         predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
         if not os.path.exists(predictor_model_path):
             os.makedirs(predictor_model_path)
-        self.predictor = Predictor(model_path=predictor_model_path)
+
+        if predictor is not None:
+            self.predictor = predictor
+        else:
+            self.predictor = Predictor(model_path=predictor_model_path)
 
         self.featurizer = OriginalFeaturizer()
         self.not_yet_given_reward = None

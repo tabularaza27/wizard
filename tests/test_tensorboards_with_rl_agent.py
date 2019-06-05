@@ -13,10 +13,11 @@ import os
 import threading
 from game_engine.game import Game
 from agents.rl_agent import RLAgent
-from agents.tensorforce.algorithms import TensorforcePPOAgent1L, TensorforcePPOAgent3L
+from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from game_engine.player import AverageRandomPlayer
 from agents.rule_based_agent import RuleBasedAgent
 
+tf.compat.v1.enable_v2_behavior()
 
 def launch_tensor_board():
     os.system('tensorboard --logdir=' + path + str(test_count))
@@ -46,8 +47,8 @@ def calculate_win_percentage(scores):
 
 report_after_games = 100
 games = 20000
-players = [TensorforcePPOAgent1L(), TensorforcePPOAgent3L(),
-           RuleBasedAgent(), AverageRandomPlayer()]
+rl_agent = TFAgentsPPOAgent()
+players = [rl_agent, rl_agent.clone(), RuleBasedAgent(), RuleBasedAgent()]
 # seed(2)
 
 ### Tensorboard / Logging Stuff start
@@ -61,13 +62,15 @@ os.makedirs(path + str(test_count))
 sess = tf.InteractiveSession()
 
 # Create a new log file for every player in the selected path
-file_writer_p1 = tf.summary.FileWriter(path + str(test_count) + '/' + players[0].__class__.__name__ + '_p1', sess.graph)
-file_writer_p2 = tf.summary.FileWriter(path + str(test_count) + '/' + players[1].__class__.__name__ + '_p2', sess.graph)
-file_writer_p3 = tf.summary.FileWriter(path + str(test_count) + '/' + players[2].__class__.__name__ + '_p3', sess.graph)
-file_writer_p4 = tf.summary.FileWriter(path + str(test_count) + '/' + players[3].__class__.__name__ + '_p4', sess.graph)
+file_writer_p1 = tf.contrib.summary.create_file_writer(
+    path + str(test_count) + '/' + players[0].name + '_p1')
+file_writer_p2 = tf.contrib.summary.create_file_writer(
+    path + str(test_count) + '/' + players[1].name + '_p2')
+file_writer_p3 = tf.contrib.summary.create_file_writer(
+    path + str(test_count) + '/' + players[2].name + '_p3')
+file_writer_p4 = tf.contrib.summary.create_file_writer(
+    path + str(test_count) + '/' + players[3].name + '_p4')
 file_writers = [file_writer_p1, file_writer_p2, file_writer_p3, file_writer_p4]
-
-tf.global_variables_initializer().run()
 
 # Run the tensorboard in a separate thread / alternativley comment this an run tensorboard in seperate terminal
 t = threading.Thread(target=launch_tensor_board, args=([]))
@@ -89,19 +92,13 @@ for i in range(games):
         win_percentage = calculate_win_percentage(scores[i - report_after_games:i])
         # loop through players and write values to disk for tensorboard use
         for index, player in enumerate(players):
-            summary = tf.Summary()
-            summary.value.add(tag="C) Score", simple_value=average_score[index])
-            summary.value.add(tag="A) Win Percentage", simple_value=win_percentage[index])
-            # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
-            if isinstance(players[index], RLAgent):
-                summary.value.add(tag="B) Valid Rate", simple_value=players[index].valid_rate)
-                summary.value.add(tag="E) Predictor Loss", simple_value=players[index].predictor.current_loss)
-                summary.value.add(tag="D) Predictor Acc", simple_value=players[index].predictor.current_acc)
+            with file_writers[index].as_default(), tf.contrib.summary.always_record_summaries():
+                tf.contrib.summary.scalar("3_score", average_score[index], step=i)
+                tf.contrib.summary.scalar("1_win_percentage", win_percentage[index], step=i)
+                # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
+                if isinstance(players[index], RLAgent):
+                    tf.contrib.summary.scalar("2_valid_rate", players[index].valid_rate, step=i)
+                    tf.contrib.summary.scalar("5_predictor_loss", players[index].predictor.current_loss, step=i)
+                    tf.contrib.summary.scalar("4_predictor_acc", players[index].predictor.current_acc, step=i)
 
-            file_writers[index].add_summary(summary, i)
-            file_writers[index].flush()
-
-# ToDo save model of best performing RL Agent --> based on valid rate or other metric ?
-players[0].save_models()
-print("Done")
-
+ppo_agent.save_models()
