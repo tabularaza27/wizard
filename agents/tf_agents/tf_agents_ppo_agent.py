@@ -14,7 +14,7 @@ from agents.rl_agent import RLAgent, STATE_DIMENSIONS, ACTION_DIMENSIONS, MODELS
 from agents.tf_agents.layers import equal_spacing_fc
 from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwork
 
-REPLAY_BUFFER_SIZE = 5000
+REPLAY_BUFFER_SIZE = sum([i ** 2 for i in range(1, 16)]) # one game
 
 def _to_tf_timestep(time_step):
     time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
@@ -30,47 +30,49 @@ class TFAgentsPPOAgent(RLAgent):
             'mask': TensorSpec((ACTION_DIMENSIONS,), tf.float32)
         }
 
-        layers = equal_spacing_fc(2)
+        layers = equal_spacing_fc(3)
 
-        actor_net_folder = os.path.join(MODELS_PATH, self.name, 'Actor')
-        self.actor_net_path = os.path.join(actor_net_folder, 'model')
         if actor_net is None:
-            actor_net = MaskedActorNetwork(observation_spec, action_spec, layers)
-            if os.path.isdir(actor_net_folder):
-                actor_net.load_weights(self.actor_net_path)
-        self.actor_net = actor_net
+            self.actor_net = MaskedActorNetwork(observation_spec, action_spec, layers)
+        else:
+            self.actor_net = actor_net
 
-        value_net_folder = os.path.join(MODELS_PATH, self.name, 'Critic')
-        self.value_net_path = os.path.join(value_net_folder, 'model')
         if value_net is None:
-            value_net = DummyMaskedValueNetwork(observation_spec, fc_layer_params=layers)
-            if os.path.isdir(value_net_folder):
-                value_net.load_weights(self.value_net_path)
-        self.value_net = value_net
+            self.value_net = DummyMaskedValueNetwork(
+                observation_spec, fc_layer_params=layers)
+        else:
+            self.value_net = value_net
 
         self.agent = tf_agents.agents.ppo.ppo_agent.PPOAgent(
             time_step_spec=ts.time_step_spec(observation_spec),
             action_spec=action_spec,
 
-            actor_net=actor_net,
-            value_net=value_net,
+            actor_net=self.actor_net,
+            value_net=self.value_net,
 
-            optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4),
+            optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=1e-5),
 
-            discount_factor=0.8,
+            discount_factor=0.97,
 
             use_gae=True,
             use_td_lambda_return=True,
-            lambda_value=0.8,
+            lambda_value=0.9,
 
-            num_epochs=25,
+            num_epochs=30,
 
             # the observations are dicts { 'state': ..., 'mask': ... }
             # normalization does not make any sense for the mask
             normalize_observations=False,
         )
 
-        self.agent.initialize()
+
+        if actor_net is not None or value_net is not None:
+            self.agent.initialize()
+        else:
+            self.train_checkpointer = tf_agents.utils.common.Checkpointer(
+                ckpt_dir=os.path.join(MODELS_PATH, self.name, 'Agent'), agent=self.agent)
+            self.train_checkpointer.initialize_or_restore()
+
         self.policy = self.agent.collect_policy
 
         self.last_time_step = None
@@ -134,7 +136,6 @@ class TFAgentsPPOAgent(RLAgent):
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor)
 
-    def save_models(self):
+    def save_models(self, global_step):
         super().save_models()
-        self.actor_net.save_weights(self.actor_net_path)
-        self.value_net.save_weights(self.value_net_path)
+        self.train_checkpointer.save(global_step)
