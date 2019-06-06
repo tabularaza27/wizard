@@ -17,6 +17,8 @@ from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwor
 REPLAY_BUFFER_SIZE = sum([i ** 2 for i in range(1, 16)]) # one game
 
 def _to_tf_timestep(time_step):
+    """Batch & convert to tensor all arrays inside the input structure"""
+
     time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
     return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
 
@@ -25,6 +27,10 @@ class TFAgentsPPOAgent(RLAgent):
         super().__init__(name, predictor)
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
+
+        # we store both mask and the actual observation in the observation given
+        # to the agent in order to get an association between these two
+        # see also https://github.com/tensorflow/agents/issues/125#issuecomment-496583325
         observation_spec = {
             'state': TensorSpec((STATE_DIMENSIONS,), tf.float32),
             'mask': TensorSpec((ACTION_DIMENSIONS,), tf.float32)
@@ -73,15 +79,29 @@ class TFAgentsPPOAgent(RLAgent):
                 ckpt_dir=os.path.join(MODELS_PATH, self.name, 'Agent'), agent=self.agent)
             self.train_checkpointer.initialize_or_restore()
 
+        # it seems like there is also agent.policy. I still don't understand when
+        # one should use which and why but this one works for now.
         self.policy = self.agent.collect_policy
 
+        # because tf_agents wants the data as trajectories
+        # (prev_time_step, action, new_time_step), we have to store the prev_time_step
+        # until we have the new_time_step to build the trajectory at which point
+        # the new prev_time_step is the new_time_step
+        # this variable is to keep track of the prev_time_step
         self.last_time_step = None
 
+        # even though PPO is on policy, storing the stuff for a bit seems to be ok
+        # and the examples in the tf_agents repo also use one
         self.replay_buffer = TFUniformReplayBuffer(self.agent.collect_data_spec,
             batch_size=1, max_length=REPLAY_BUFFER_SIZE)
         self.replay_buffer_position = 0
 
     def _add_trajectory(self, prev_time_step, action, new_time_step):
+        """Add a trajectory (prev_time_step, action, new_time_step) to the replay buffer
+
+        Also train the agent on the whole buffer if it is full.
+        """
+
         traj = tf_agents.trajectories.trajectory.from_transition(
             prev_time_step, action, new_time_step)
 
@@ -100,6 +120,7 @@ class TFAgentsPPOAgent(RLAgent):
         }
 
         if self.last_time_step is None:
+            # a new episode started
             self.last_time_step = _to_tf_timestep(ts.restart(observation))
             self.last_action_step = self.policy.action(self.last_time_step)
             return self.last_action_step.action.numpy()[0,0]
@@ -133,9 +154,13 @@ class TFAgentsPPOAgent(RLAgent):
         self.prev_reward = None
 
     def clone(self):
+        """Return a clone of this agent with networks & predictor shared"""
+
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor)
 
     def save_models(self, global_step):
+        """Save actor, critic and predictor"""
+
         super().save_models()
         self.train_checkpointer.save(global_step)

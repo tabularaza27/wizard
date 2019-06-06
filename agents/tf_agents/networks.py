@@ -7,6 +7,17 @@ from tf_agents.networks.actor_distribution_network import ActorDistributionNetwo
 from tf_agents.networks.value_network import ValueNetwork
 
 class MaskedActorNetwork(ActorDistributionNetwork):
+    """An actor network which filters the output action distribution using a mask.
+
+    The mask is an np.ndarray which is -np.inf if the action is not possible
+    and 0 if it is possible. By adding this mask to the logits (the vector before the softmax),
+    the invalid actions are not -inf and only valid actions remain with the same value.
+
+    The mask is stored inside the observation so it can be applied in order to have
+    an association between the two (which an extra method to set the mask would not give).
+    The observation is therefore of the form { 'state': actual_observation, 'mask': mask }
+    """
+
     def __init__(self, input_tensor_spec, output_tensor_spec, fc_layer_params):
         super().__init__(input_tensor_spec['state'], output_tensor_spec, fc_layer_params)
 
@@ -32,10 +43,14 @@ class MaskedActorNetwork(ActorDistributionNetwork):
     def __call__(self, inputs, *args, **kwargs):
         return super(Network, self).__call__(inputs, *args, **kwargs)
 
-# the value network gets the same input as the actor network
-# however only the actor network actually needs the mask
-# so in the value network, we have to throw it away explicitly
 class DummyMaskedValueNetwork(ValueNetwork):
+    """A value network which uses only observation['state'] as observation.
+
+    For Actor critic methods, the value network gets the same input
+    as the actor network however only the actor network actually
+    needs the mask so in the value network, we have to throw it away explicitly
+    """
+
     def __init__(self, input_tensor_spec, fc_layer_params):
         super().__init__(input_tensor_spec['state'], fc_layer_params)
 

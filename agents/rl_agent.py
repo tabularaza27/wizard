@@ -86,7 +86,7 @@ class RLAgent(AverageRandomPlayer):
         playable_cards = self.get_playable_cards(first)
         playable_cards = [int(card) for card in playable_cards]
         action_mask = np.full(ACTION_DIMENSIONS, -np.inf, dtype=np.float32)
-        action_mask[playable_cards] = 1
+        action_mask[playable_cards] = 0
         return action_mask
 
     def play_card(self, trump: Card, first: Card, played: List[Card],
