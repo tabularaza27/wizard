@@ -67,11 +67,13 @@ class RLAgent(AverageRandomPlayer):
     def save_models(self):
         self.predictor.save_model()
 
-    def act(self, state: np.array) -> Card:
+    def act(self, state: np.ndarray, valid_action_mask: np.ndarray) -> Card:
         """Returns the action the model takes if it is in the given state
 
         Args:
             state: The observation (output from featurizer)
+            valid_action_mask: for each element in the array, a 1 if
+                we can play this card (take this action) and a 0 if we can't
 
         Returns: The card the model will play (removed from hand)
         """
@@ -80,6 +82,13 @@ class RLAgent(AverageRandomPlayer):
     def observe(self, reward: float, terminal: bool):
         """Feeds the reward to the model & resets stuff if terminal is True"""
         raise # Has to be implemented by child
+
+    def _valid_action_mask(self, first):
+        playable_cards = self.get_playable_cards(first)
+        playable_cards = [int(card) for card in playable_cards]
+        action_mask = np.full(ACTION_DIMENSIONS, -np.inf, dtype=np.float32)
+        action_mask[playable_cards] = 1
+        return action_mask
 
     def play_card(self, trump: Card, first: Card, played: List[Card],
             players: List[Player], played_in_game: List[Card]):
@@ -97,7 +106,7 @@ class RLAgent(AverageRandomPlayer):
 
         state = self.featurizer.transform(self, trump, first,
             played, players, played_in_game)
-        action = self.act(state)
+        action = self.act(state, self._valid_action_mask(first))
 
         # find the card which corresponds to that action and return it if valid
         playable_cards = self.get_playable_cards(first)
@@ -113,7 +122,7 @@ class RLAgent(AverageRandomPlayer):
         # the agent is trying to play a card which is invalid
         # we give him a negative reward, play a random card and continue
         self.last_10000_cards_played_valid.append(0)
-        self.not_yet_given_reward = -100
+        self.not_yet_given_reward = -10
         return super().play_card(trump, first, played, players, played_in_game)
 
     def get_prediction(self, trump: Card, num_players: int):
