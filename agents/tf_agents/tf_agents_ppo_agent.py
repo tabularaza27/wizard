@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import tensorflow as tf
 import tf_agents
@@ -8,11 +10,15 @@ import tf_agents.replay_buffers
 from tensorflow.contrib.framework import TensorSpec, BoundedTensorSpec
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 
-from agents.rl_agent import RLAgent, STATE_DIMENSIONS, ACTION_DIMENSIONS
+from agents.rl_agent import RLAgent, STATE_DIMENSIONS, ACTION_DIMENSIONS, MODELS_PATH
 from agents.tf_agents.layers import equal_spacing_fc
 from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwork
 
 REPLAY_BUFFER_SIZE = 5000
+
+def _to_tf_timestep(time_step):
+    time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
+    return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
 
 class TFAgentsPPOAgent(RLAgent):
     def __init__(self, name=None, actor_net=None, value_net=None, predictor=None):
@@ -26,11 +32,20 @@ class TFAgentsPPOAgent(RLAgent):
 
         layers = equal_spacing_fc(2)
 
+        actor_net_folder = os.path.join(MODELS_PATH, self.name, 'Actor')
+        self.actor_net_path = os.path.join(actor_net_folder, 'model')
         if actor_net is None:
             actor_net = MaskedActorNetwork(observation_spec, action_spec, layers)
+            if os.path.isdir(actor_net_folder):
+                actor_net.load_weights(self.actor_net_path)
+        self.actor_net = actor_net
+
+        value_net_folder = os.path.join(MODELS_PATH, self.name, 'Critic')
+        self.value_net_path = os.path.join(value_net_folder, 'model')
         if value_net is None:
             value_net = DummyMaskedValueNetwork(observation_spec, fc_layer_params=layers)
-        self.actor_net = actor_net
+            if os.path.isdir(value_net_folder):
+                value_net.load_weights(self.value_net_path)
         self.value_net = value_net
 
         self.agent = tf_agents.agents.ppo.ppo_agent.PPOAgent(
@@ -64,10 +79,6 @@ class TFAgentsPPOAgent(RLAgent):
             batch_size=1, max_length=REPLAY_BUFFER_SIZE)
         self.replay_buffer_position = 0
 
-    def _to_tf_timestep(self, time_step):
-        time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
-        return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
-
     def _add_trajectory(self, prev_time_step, action, new_time_step):
         traj = tf_agents.trajectories.trajectory.from_transition(
             prev_time_step, action, new_time_step)
@@ -87,11 +98,11 @@ class TFAgentsPPOAgent(RLAgent):
         }
 
         if self.last_time_step is None:
-            self.last_time_step = self._to_tf_timestep(ts.restart(observation))
+            self.last_time_step = _to_tf_timestep(ts.restart(observation))
             self.last_action_step = self.policy.action(self.last_time_step)
             return self.last_action_step.action.numpy()[0,0]
 
-        new_time_step = self._to_tf_timestep(ts.transition(observation, self.prev_reward))
+        new_time_step = _to_tf_timestep(ts.transition(observation, self.prev_reward))
         self._add_trajectory(self.last_time_step, self.last_action_step, new_time_step)
 
         self.last_time_step = new_time_step
@@ -108,7 +119,7 @@ class TFAgentsPPOAgent(RLAgent):
         # even when the episode ends, tf_agents expects some observation
         # additionally to the reward. Because that makes no sense for us,
         # we just give it an observation consisting of all-zeros
-        new_time_step = self._to_tf_timestep(ts.termination({
+        new_time_step = _to_tf_timestep(ts.termination({
             'state': np.zeros(STATE_DIMENSIONS),
             'mask': np.zeros(ACTION_DIMENSIONS)
         }, reward))
@@ -122,3 +133,8 @@ class TFAgentsPPOAgent(RLAgent):
     def clone(self):
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor)
+
+    def save_models(self):
+        super().save_models()
+        self.actor_net.save_weights(self.actor_net_path)
+        self.value_net.save_weights(self.value_net_path)

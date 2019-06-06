@@ -44,14 +44,11 @@ class RLAgent(AverageRandomPlayer):
         else:
             self.name = self.__class__.__name__
 
-        predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
-        if not os.path.exists(predictor_model_path):
-            os.makedirs(predictor_model_path)
-
+        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
         if predictor is not None:
             self.predictor = predictor
         else:
-            self.predictor = Predictor(model_path=predictor_model_path)
+            self.predictor = Predictor(model_path=self.predictor_model_path)
 
         self.featurizer = OriginalFeaturizer()
         self.not_yet_given_reward = None
@@ -65,6 +62,8 @@ class RLAgent(AverageRandomPlayer):
         self.valid_rate = 0
 
     def save_models(self):
+        if not os.path.exists(self.predictor_model_path):
+            os.makedirs(self.predictor_model_path)
         self.predictor.save_model()
 
     def act(self, state: np.ndarray, valid_action_mask: np.ndarray) -> Card:
