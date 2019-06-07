@@ -50,7 +50,8 @@ class RLAgent(AverageRandomPlayer):
         if predictor is not None:
             self.predictor = predictor
         else:
-            self.predictor = Predictor(model_path=self.predictor_model_path)
+            self.predictor = Predictor(model_path=self.predictor_model_path,
+                keep_models_fixed=keep_models_fixed)
 
         self.keep_models_fixed = keep_models_fixed
         self.featurizer = OriginalFeaturizer()

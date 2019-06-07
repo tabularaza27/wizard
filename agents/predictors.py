@@ -175,11 +175,12 @@ class Predictor:
         if self.buffer_filled and self.batch_position % self.train_step == 0:
             if not self.keep_models_fixed:
                 history = self.model.fit(self.x_batch, self.y_batch)
+                # update predictors values of loss and acc --> used for tensorforce reporting
+                self.current_acc = history.history['accuracy'][0]
+                self.current_loss = history.history['loss'][0]
             else:
-                history = self.model.evaluate(self.x_batch, self.y_batch)
-            # update predictors values of loss and acc --> used for tensorforce reporting
-            self.current_acc = history.history['accuracy'][0]
-            self.current_loss = history.history['loss'][0]
+                self.current_loss, self.current_acc = \
+                    self.model.evaluate(self.x_batch, self.y_batch)
 
         if self.batch_position == self.train_batch_size - 1:
             self.buffer_filled = True
