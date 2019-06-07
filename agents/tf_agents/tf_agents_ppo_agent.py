@@ -36,7 +36,7 @@ class TFAgentsPPOAgent(RLAgent):
             'mask': TensorSpec((ACTION_DIMENSIONS,), tf.float32)
         }
 
-        layers = equal_spacing_fc(3)
+        layers = equal_spacing_fc(5)
 
         if actor_net is None:
             self.actor_net = MaskedActorNetwork(observation_spec, action_spec, layers)
@@ -58,11 +58,11 @@ class TFAgentsPPOAgent(RLAgent):
 
             optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=1e-5),
 
-            discount_factor=0.97,
+            discount_factor=1,
 
             use_gae=True,
             use_td_lambda_return=True,
-            lambda_value=0.9,
+            lambda_value=0.85,
 
             num_epochs=30,
 
