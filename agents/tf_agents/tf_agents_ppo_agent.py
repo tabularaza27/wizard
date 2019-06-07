@@ -161,7 +161,8 @@ class TFAgentsPPOAgent(RLAgent):
         """Return a clone of this agent with networks & predictor shared"""
 
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
-            actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor)
+            actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor,
+            keep_models_fixed=self.keep_models_fixed)
 
     def save_models(self, global_step: int):
         """Save actor, critic and predictor
