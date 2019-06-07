@@ -170,7 +170,6 @@ class Predictor:
 
         # Train when train_step samples were reached
         if self.buffer_filled and self.batch_position % self.train_step == 0:
-            self.model.fit(self.x_batch, self.y_batch)
             history = self.model.fit(self.x_batch, self.y_batch)
             # update predictors values of loss and acc --> used for tensorforce reporting
             self.current_acc = history.history['accuracy'][0]
