@@ -56,7 +56,7 @@ class TFAgentsPPOAgent(RLAgent):
             actor_net=self.actor_net,
             value_net=self.value_net,
 
-            optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=1e-5),
+            optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4),
 
             discount_factor=1,
 
