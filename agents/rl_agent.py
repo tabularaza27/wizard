@@ -21,6 +21,8 @@ class RLAgent(AverageRandomPlayer):
             where the model is saved. Defaults to class name.
         predictor (Predictor): A predictor specific to that agent.
             Doesn't share parameters with any other predictor.
+        keep_models_fixed: If set to true, neither the predictor
+            nor the extending agent is trained, so only inference is done.
         featurizer (OriginalFeaturizer): Used for getting the state
             from the arguments to play_card
         not_yet_given_reward (float | None):
@@ -36,7 +38,7 @@ class RLAgent(AverageRandomPlayer):
             which is what this variable is for
     """
 
-    def __init__(self, name=None, predictor=None):
+    def __init__(self, name=None, predictor=None, keep_models_fixed=False):
         super().__init__()
 
         if name is not None:
@@ -50,6 +52,7 @@ class RLAgent(AverageRandomPlayer):
         else:
             self.predictor = Predictor(model_path=self.predictor_model_path)
 
+        self.keep_models_fixed = keep_models_fixed
         self.featurizer = OriginalFeaturizer()
         self.not_yet_given_reward = None
 
@@ -62,6 +65,9 @@ class RLAgent(AverageRandomPlayer):
         self.valid_rate = 0
 
     def save_models(self):
+        if self.keep_models_fixed:
+            return
+
         if not os.path.exists(self.predictor_model_path):
             os.makedirs(self.predictor_model_path)
         self.predictor.save_model()

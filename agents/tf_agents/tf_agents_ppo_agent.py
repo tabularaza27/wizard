@@ -23,8 +23,9 @@ def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
     return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
 
 class TFAgentsPPOAgent(RLAgent):
-    def __init__(self, name=None, actor_net=None, value_net=None, predictor=None):
-        super().__init__(name, predictor)
+    def __init__(self, name=None, actor_net=None, value_net=None,
+            predictor=None, keep_models_fixed=False):
+        super().__init__(name, predictor, keep_models_fixed)
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
 
@@ -109,7 +110,8 @@ class TFAgentsPPOAgent(RLAgent):
         self.replay_buffer_position += 1
 
         if self.replay_buffer_position == REPLAY_BUFFER_SIZE + 1:
-            self.agent.train(self.replay_buffer.gather_all())
+            if not self.keep_models_fixed:
+                self.agent.train(self.replay_buffer.gather_all())
             self.replay_buffer_position = 0
             self.replay_buffer.clear()
 
@@ -166,6 +168,9 @@ class TFAgentsPPOAgent(RLAgent):
             global_step: the current game number, is appended to
                 the filenames of the saved models
         """
+
+        if self.keep_models_fixed:
+            return
 
         super().save_models()
         self.train_checkpointer.save(global_step)
