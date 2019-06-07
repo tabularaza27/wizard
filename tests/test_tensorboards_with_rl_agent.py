@@ -93,11 +93,11 @@ for i in range(games):
         # loop through players and write values to disk for tensorboard use
         for index, player in enumerate(players):
             with file_writers[index].as_default(), tf.contrib.summary.always_record_summaries():
-                tf.contrib.summary.scalar("3_score", average_score[index], step=i)
+                tf.contrib.summary.scalar("2_score", average_score[index], step=i)
                 tf.contrib.summary.scalar("1_win_percentage", win_percentage[index], step=i)
                 # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
                 if isinstance(players[index], RLAgent):
-                    tf.contrib.summary.scalar("2_valid_rate", players[index].valid_rate, step=i)
-                    tf.contrib.summary.scalar("5_predictor_loss", players[index].predictor.current_loss, step=i)
-                    tf.contrib.summary.scalar("4_predictor_acc", players[index].predictor.current_acc, step=i)
+                    tf.contrib.summary.scalar("5_valid_rate", players[index].valid_rate, step=i)
+                    tf.contrib.summary.scalar("4_predictor_loss", players[index].predictor.current_loss, step=i)
+                    tf.contrib.summary.scalar("3_predictor_acc", players[index].predictor.current_acc, step=i)
         rl_agent.save_models(i)
