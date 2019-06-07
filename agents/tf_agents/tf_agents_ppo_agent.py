@@ -16,8 +16,8 @@ from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwor
 
 REPLAY_BUFFER_SIZE = sum([i ** 2 for i in range(1, 16)]) # one game
 
-def _to_tf_timestep(time_step):
-    """Batch & convert to tensor all arrays inside the input structure"""
+def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
+    """Batch & convert all arrays to tensors in the input timestep"""
 
     time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
     return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
@@ -28,8 +28,8 @@ class TFAgentsPPOAgent(RLAgent):
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
 
-        # we store both mask and the actual observation in the observation given
-        # to the agent in order to get an association between these two
+        # we store both mask and the actual observation in the observation
+        # given to the agent in order to get an association between these two
         # see also https://github.com/tensorflow/agents/issues/125#issuecomment-496583325
         observation_spec = {
             'state': TensorSpec((STATE_DIMENSIONS,), tf.float32),
@@ -153,14 +153,19 @@ class TFAgentsPPOAgent(RLAgent):
         self.last_action_step = None
         self.prev_reward = None
 
-    def clone(self):
+    def clone(self) -> TFAgentsPPOAgent:
         """Return a clone of this agent with networks & predictor shared"""
 
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor)
 
-    def save_models(self, global_step):
-        """Save actor, critic and predictor"""
+    def save_models(self, global_step: int):
+        """Save actor, critic and predictor
+
+        Args:
+            global_step: the current game number, is appended to
+                the filenames of the saved models
+        """
 
         super().save_models()
         self.train_checkpointer.save(global_step)

@@ -11,10 +11,9 @@ class MaskedActorNetwork(ActorDistributionNetwork):
 
     The mask is an np.ndarray which is -np.inf if the action is not possible
     and 0 if it is possible. By adding this mask to the logits (the vector before the softmax),
-    the invalid actions are not -inf and only valid actions remain with the same value.
+    the invalid actions are now -inf and only valid actions remain with the same value.
 
-    The mask is stored inside the observation so it can be applied in order to have
-    an association between the two (which an extra method to set the mask would not give).
+    The mask is stored inside the observation in order to have an association between the two.
     The observation is therefore of the form { 'state': actual_observation, 'mask': mask }
     """
 
@@ -30,7 +29,7 @@ class MaskedActorNetwork(ActorDistributionNetwork):
 
         # for some reason, when we get a batch there is an extra axis of dimension 1
         # we therefore also have to insert this axis into our mask
-        if (len(action_distributions.logits.shape) == 4):
+        if len(action_distributions.logits.shape) == 4:
             masks = tf.expand_dims(masks, 2)
 
         masked_logits = masks + action_distributions.logits
@@ -46,9 +45,9 @@ class MaskedActorNetwork(ActorDistributionNetwork):
 class DummyMaskedValueNetwork(ValueNetwork):
     """A value network which uses only observation['state'] as observation.
 
-    For Actor critic methods, the value network gets the same input
+    For actor-critic methods, the value network gets the same input
     as the actor network however only the actor network actually
-    needs the mask so in the value network, we have to throw it away explicitly
+    needs the mask, so in the value network we have to throw it away explicitly
     """
 
     def __init__(self, input_tensor_spec, fc_layer_params):
