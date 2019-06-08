@@ -99,6 +99,8 @@ class TFAgentsPPOAgent(RLAgent):
             batch_size=1, max_length=REPLAY_BUFFER_SIZE)
         self.replay_buffer_position = 0
 
+        self.clone_counter = 0
+
     def _add_trajectory(self, prev_time_step, action, new_time_step):
         """Add a trajectory (prev_time_step, action, new_time_step) to the replay buffer
 
@@ -160,7 +162,8 @@ class TFAgentsPPOAgent(RLAgent):
     def clone(self) -> TFAgentsPPOAgent:
         """Return a clone of this agent with networks & predictor shared"""
 
-        return TFAgentsPPOAgent(name=self.name + 'Clone' + str(np.random.randint(1e10)),
+        self.clone_counter += 1
+        return TFAgentsPPOAgent(name=self.name + 'Clone' + str(self.clone_counter),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor,
             keep_models_fixed=self.keep_models_fixed)
 
