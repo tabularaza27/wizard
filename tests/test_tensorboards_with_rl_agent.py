@@ -48,7 +48,7 @@ def calculate_win_percentage(scores):
 report_after_games = 100
 games = 2000000
 rl_agent = TFAgentsPPOAgent()
-players = [rl_agent, rl_agent.clone(), RuleBasedAgent(), RuleBasedAgent()]
+players = [rl_agent, rl_agent.clone(), rl_agent.clone(), rl_agent.clone()]
 # seed(2)
 
 ### Tensorboard / Logging Stuff start
