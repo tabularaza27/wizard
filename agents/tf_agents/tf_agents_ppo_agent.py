@@ -16,7 +16,7 @@ from agents.rl_agent import RLAgent, STATE_DIMENSIONS, ACTION_DIMENSIONS, MODELS
 from agents.tf_agents.layers import equal_spacing_fc
 from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwork
 
-REPLAY_BUFFER_SIZE = sum([i ** 2 for i in range(1, 16)]) # one game
+REPLAY_BUFFER_SIZE = 10 * sum(range(1, 16)) # 10 games
 
 def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
     """Batch & convert all arrays to tensors in the input timestep"""
