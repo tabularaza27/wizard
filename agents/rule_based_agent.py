@@ -1,32 +1,62 @@
+import os
 import random
 import collections
 import numpy as np
 
 from game_engine import player
+from agents.predictors import Predictor
+
+MODELS_PATH = 'models/'
 
 class RuleBasedAgent(player.Player):
     """A computer player that makes decision on predefined rules.
     Aims to resemble the performance and behaviour of that of a human.
     Agent functions by calculating the win desirability of the trick and the
     win probability given the cards. It then makes a decision of what card based
-    on the probabilities."""
+    on the probabilities.
+
+    Attributes:
+        name (str): name of agent
+        aggresion (float): see comment below
+        use_predictor (bool): if True uses neural net as predictor, else use rule base predictor
+        keep_models_fixed (bool): if True, NN is not trained if agent uses it for predictions
+
+    """
+
 
     # Use this to print out a trick by trick breakdown of the state of the trick and
     # the action and inferences of the rule-based agent
     DEBUG = False
 
-    def __init__(self, name = None, aggression=0.0):
+    def __init__(self, name = None, aggression=0.0, use_predictor=False, keep_models_fixed=False):
         super().__init__()
         self.round = 1
         self.num_players = 4
         self.error = 0
         if name is not None:
             self.name = name
+        elif use_predictor:
+            self.name = self.__class__.__name__ + 'Predictor'
         else:
             self.name = self.__class__.__name__
+
         # aggression is a measure of how high the agent naturally tries to predict. High aggression is good
         # with weak opponents and low aggression for quality opponents. Takes values between -1 and 1.
         self.aggression = self.bound(aggression, 1, -1)
+
+        self.use_predictor = use_predictor
+        self.keep_models_fixed = keep_models_fixed
+
+        if self.use_predictor:
+            self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+            self.predictor = Predictor(model_path=self.predictor_model_path, keep_models_fixed=self.keep_models_fixed)
+
+    def save_models(self):
+        if self.keep_models_fixed:
+            return
+        if not os.path.exists(self.predictor_model_path):
+            os.makedirs(self.predictor_model_path)
+        self.predictor.save_model()
 
     def get_prediction(self, trump, num_players):
         """
@@ -37,20 +67,25 @@ class RuleBasedAgent(player.Player):
         :param num_players:
         :return: prediction:
         """
-        self.num_players = num_players
-        self.played = []
-        self.error += (self.prediction - self.wins)
-        prediction = 0
-        for card in self.hand:
-            if card.value == 14:
-                prediction += 0.95 + (0.05 * self.aggression)
-            elif card.color == trump:
-                prediction += (card.value * (0.050 + (0.005 * self.aggression))) + 0.3
-            else:
-                prediction += (card.value * (0.030 + (0.005 * self.aggression)))
-        prediction = round(self.bound(prediction,len(self.hand), 0), 0)
-        self.prediction = prediction
-        return prediction
+
+        if self.use_predictor:
+            self.prediction_x, prediction = self.predictor.make_prediction(self.hand, trump)
+            return prediction
+        else:
+            self.num_players = num_players
+            self.played = []
+            self.error += (self.prediction - self.wins)
+            prediction = 0
+            for card in self.hand:
+                if card.value == 14:
+                    prediction += 0.95 + (0.05 * self.aggression)
+                elif card.color == trump:
+                    prediction += (card.value * (0.050 + (0.005 * self.aggression))) + 0.3
+                else:
+                    prediction += (card.value * (0.030 + (0.005 * self.aggression)))
+            prediction = round(self.bound(prediction,len(self.hand), 0), 0)
+            self.prediction = prediction
+            return prediction
 
     def announce_result(self, num_tricks_achieved, reward):
         """
@@ -59,10 +94,17 @@ class RuleBasedAgent(player.Player):
         :param reward:
         :return:
         """
-        self.wins = num_tricks_achieved
-        self.reward = reward
-        self.score += reward
-        self.hand = []
+
+        if self.use_predictor:
+            super().announce_result(num_tricks_achieved, reward)
+            self.predictor.add_game_result(self.prediction_x, num_tricks_achieved)
+
+        else:
+            self.wins = num_tricks_achieved
+            self.reward = reward
+            self.score += reward
+            self.hand = []
+
         if 60/self.num_players == self.round:
             self.round = 1
         else:

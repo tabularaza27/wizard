@@ -6,6 +6,7 @@ from random import seed
 import numpy as np
 # This allows the file to be run in a test folder as opposed to having to be in the root directory
 import sys
+
 sys.path.append('../')
 
 import tensorflow as tf
@@ -18,6 +19,7 @@ from game_engine.player import AverageRandomPlayer
 from agents.rule_based_agent import RuleBasedAgent
 
 tf.compat.v1.enable_v2_behavior()
+
 
 def launch_tensor_board():
     os.system('tensorboard --logdir=' + path + str(test_count))
@@ -33,7 +35,7 @@ def calculate_win_percentage(scores):
     Returns:
         dict: player index as keys and win percentage as values
     """
-    player_indices, win_counts = np.unique(np.argmax(scores,axis=1), return_counts=True)
+    player_indices, win_counts = np.unique(np.argmax(scores, axis=1), return_counts=True)
     win_dict = dict(zip(player_indices, win_counts))
     for player_index in range(0, scores.shape[1]):
         if player_index not in win_dict:
@@ -45,10 +47,20 @@ def calculate_win_percentage(scores):
     return win_dict
 
 
+self_play = False
 report_after_games = 100
 games = 2000000
 rl_agent = TFAgentsPPOAgent()
-players = [rl_agent, rl_agent.clone(), rl_agent.clone(), rl_agent.clone()]
+
+if self_play:
+    players = [rl_agent, rl_agent.clone(), rl_agent.clone(), rl_agent.clone()]
+else:
+    # use 2 rl agents, 1 normal rule_based agent, 1 rule based agent with predictor
+
+    rule_based_agent = RuleBasedAgent()
+    rule_based_agent_with_predictor = RuleBasedAgent(use_predictor=True)
+    players = [rl_agent, rl_agent.clone(), rule_based_agent, rule_based_agent_with_predictor]
+
 # seed(2)
 
 ### Tensorboard / Logging Stuff start
@@ -56,7 +68,7 @@ test_count = 1
 path = 'logs/' + players[0].name + '/test_'
 # Create a new path for logging the evaluation data
 while os.path.exists(path + str(test_count)):
-    test_count+=1
+    test_count += 1
 os.makedirs(path + str(test_count))
 
 sess = tf.InteractiveSession()
@@ -95,9 +107,11 @@ for i in range(games):
             with file_writers[index].as_default(), tf.contrib.summary.always_record_summaries():
                 tf.contrib.summary.scalar("2_score", average_score[index], step=i)
                 tf.contrib.summary.scalar("1_win_percentage", win_percentage[index], step=i)
-                # ToDo change calculation of valid rate for RL Agent s.t. all played hands are considered and not last 10000
-                if isinstance(players[index], RLAgent):
-                    tf.contrib.summary.scalar("5_valid_rate", players[index].valid_rate, step=i)
+                if hasattr(players[index], 'predictor'):
                     tf.contrib.summary.scalar("4_predictor_loss", players[index].predictor.current_loss, step=i)
                     tf.contrib.summary.scalar("3_predictor_acc", players[index].predictor.current_acc, step=i)
+                if isinstance(players[index], RLAgent):
+                    tf.contrib.summary.scalar("5_valid_rate", players[index].valid_rate, step=i)
         rl_agent.save_models(i)
+        if not self_play:
+            rule_based_agent_with_predictor.save_models()

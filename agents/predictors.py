@@ -62,8 +62,6 @@ class Predictor:
         self.current_loss = None
         self.current_acc = None
 
-        # self.tensorboard_callback = K.callbacks.TensorBoard(log_dir=logdir)
-
         self.model_path = model_path + str(max_num_tricks) + '.h5'
         if os.path.isfile(self.model_path):
             self.model = K.models.load_model(self.model_path)

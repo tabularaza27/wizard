@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 
 import os
 
@@ -159,7 +159,7 @@ class TFAgentsPPOAgent(RLAgent):
         self.last_action_step = None
         self.prev_reward = None
 
-    def clone(self) -> TFAgentsPPOAgent:
+    def clone(self):
         """Return a clone of this agent with networks & predictor shared"""
 
         self.clone_counter += 1
