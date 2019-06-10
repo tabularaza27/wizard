@@ -1,7 +1,7 @@
 import numpy as np
 
-from agents import predictors
-from agents.original import featurizers, estimators, policies
+from agents import predictors, featurizers
+from agents.original import estimators, policies
 from game_engine import player
 
 
@@ -53,7 +53,7 @@ class OriginalRLAgent(player.AverageRandomPlayer):
              decided to play.
         """
         state = self.featurizer.transform(self, trump, first, played, players,
-                                          played_in_game)
+                                          played_in_game, None)
         terminal = False
         if self.old_state is not None and self.old_action is not None:
             r = self.reward

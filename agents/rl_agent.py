@@ -1,17 +1,17 @@
-import glob
 import os
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 
 from agents.predictors import Predictor
-from agents.original.featurizers import OriginalFeaturizer
+from agents.featurizers import OriginalFeaturizer, FullFeaturizer
 from game_engine.player import Player, AverageRandomPlayer
 from game_engine.card import Card
 
-STATE_DIMENSIONS = 180
 ACTION_DIMENSIONS = 4 * 13 + 2
 MODELS_PATH = 'models/'
+PLAYER = 4
+
 
 class RLAgent(AverageRandomPlayer):
     """Abstract RL Agent. Should be extended specific for each library.
@@ -38,7 +38,7 @@ class RLAgent(AverageRandomPlayer):
             which is what this variable is for
     """
 
-    def __init__(self, name=None, predictor=None, keep_models_fixed=False):
+    def __init__(self, name=None, predictor=None, keep_models_fixed=False, featurizer=None):
         super().__init__()
 
         if name is not None:
@@ -51,11 +51,19 @@ class RLAgent(AverageRandomPlayer):
             self.predictor = predictor
         else:
             self.predictor = Predictor(model_path=self.predictor_model_path,
-                keep_models_fixed=keep_models_fixed)
+                                       keep_models_fixed=keep_models_fixed)
 
         self.keep_models_fixed = keep_models_fixed
-        self.featurizer = OriginalFeaturizer()
+
+        if featurizer is None:
+            featurizer = FullFeaturizer()
+        self.featurizer = featurizer
         self.not_yet_given_reward = None
+
+        # keep track of which colors other players don't have based on if they follow the suit
+        self.color_left_indicator = np.zeros((PLAYER - 1, 4))
+        self.last_first = None
+        self.round_index = 0
 
         # TODO remove this when the plotting functionality is there,
         # should be able to handle this easier
@@ -83,11 +91,11 @@ class RLAgent(AverageRandomPlayer):
 
         Returns: The card the model will play (removed from hand)
         """
-        raise # Has to be implemented by child
+        raise  # Has to be implemented by child
 
     def observe(self, reward: float, terminal: bool):
         """Feeds the reward to the model & resets stuff if terminal is True"""
-        raise # Has to be implemented by child
+        raise  # Has to be implemented by child
 
     def _valid_action_mask(self, first):
         playable_cards = self.get_playable_cards(first)
@@ -96,8 +104,8 @@ class RLAgent(AverageRandomPlayer):
         action_mask[playable_cards] = 0
         return action_mask
 
-    def play_card(self, trump: Card, first: Card, played: List[Card],
-            players: List[Player], played_in_game: List[Card]):
+    def play_card(self, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
+                  played_in_round: Dict[int, List[Card]]):
         """Plays a card based on the agents action"""
 
         # TODO replace this print with the corresponding plotting once
@@ -110,8 +118,12 @@ class RLAgent(AverageRandomPlayer):
             self.observe(reward=self.not_yet_given_reward, terminal=False)
             self.not_yet_given_reward = None
 
-        state = self.featurizer.transform(self, trump, first,
-            played, players, played_in_game)
+        # keep track of which colors the other players have
+        self._update_color_information(first, players, played_in_round)
+
+        state = self.featurizer.transform(self, trump, first, played, players, played_in_round,
+                                          self.color_left_indicator)
+
         action = self.act(state, self._valid_action_mask(first))
 
         # find the card which corresponds to that action and return it if valid
@@ -129,7 +141,7 @@ class RLAgent(AverageRandomPlayer):
         # we give him a negative reward, play a random card and continue
         self.last_10000_cards_played_valid.append(0)
         self.not_yet_given_reward = -10
-        return super().play_card(trump, first, played, players, played_in_game)
+        return super().play_card(trump, first, played, players, played_in_round)
 
     def get_prediction(self, trump: Card, num_players: int):
         """Return the round prediction using the build in NN Predictor"""
@@ -144,3 +156,24 @@ class RLAgent(AverageRandomPlayer):
         self.observe(reward=reward_to_give, terminal=True)
         self.not_yet_given_reward = None
         self.predictor.add_game_result(self.prediction_x, num_tricks_achieved)
+
+    def _update_color_information(self, first, players, played_in_round):
+        """Updates self.color_left_indicator based on if the other players followed the suit druing the last round"""
+        if min(len(cards) for cards in played_in_round.values()) == 0:
+            self.color_left_indicator = np.zeros((PLAYER - 1, 4))
+            self.last_first = None
+            self.round_index = 0
+
+        if self.last_first is not None and self.round_index > 0:
+            color_indicator_index = 0
+            for index, player in enumerate(players):
+                if not player == self:
+                    if not self._follows_suit(first, played_in_round[index][self.round_index - 1]):
+                        self.color_left_indicator[color_indicator_index][Card.colors.index(first.color) - 1] = 1
+                    color_indicator_index += 1
+
+        self.round_index += 1
+        self.last_first = first
+
+    def _follows_suit(self, first, card):
+        return first is None or card.color == 'White' or first.color == 'White' or first.color == card.color
