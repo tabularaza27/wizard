@@ -35,10 +35,12 @@ class Predictor:
         model (keras.models.Model): The NN
         train_step (int): How many samples should be recorded before a training step is executed.
         verbose (bool): Determines if information about the prediction performance should be printed
+        keep_models_fixed: If set to true, the NN is not trained
     """
 
     def __init__(self, model_path='prediction_model', max_num_tricks=15,
-                 train_batch_size=1000, train_step=300, verbose=True):
+                 train_batch_size=1000, train_step=300,
+                 verbose=True, keep_models_fixed=False):
         self.max_num_tricks = max_num_tricks
 
         self.y_dim = self.max_num_tricks + 1
@@ -54,6 +56,7 @@ class Predictor:
         self.batch_position = 0
         self.train_batch_size = train_batch_size
         self.verbose = verbose
+        self.keep_models_fixed = keep_models_fixed
 
         # keep track of current loss and acc of predictor
         self.current_loss = None
@@ -170,11 +173,14 @@ class Predictor:
 
         # Train when train_step samples were reached
         if self.buffer_filled and self.batch_position % self.train_step == 0:
-            self.model.fit(self.x_batch, self.y_batch)
-            history = self.model.fit(self.x_batch, self.y_batch)
-            # update predictors values of loss and acc --> used for tensorforce reporting
-            self.current_acc = history.history['acc'][0]
-            self.current_loss = history.history['loss'][0]
+            if not self.keep_models_fixed:
+                history = self.model.fit(self.x_batch, self.y_batch)
+                # update predictors values of loss and acc --> used for tensorforce reporting
+                self.current_acc = history.history['accuracy'][0]
+                self.current_loss = history.history['loss'][0]
+            else:
+                self.current_loss, self.current_acc = \
+                    self.model.evaluate(self.x_batch, self.y_batch)
 
         if self.batch_position == self.train_batch_size - 1:
             self.buffer_filled = True
