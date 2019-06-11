@@ -160,18 +160,24 @@ class FullFeaturizer(Featurizer):
 
         played_cards_arr = np.concatenate(tuple(played_cards_arr))
 
-        # how much tricks the player predicted
-        prediction = player.prediction
-
         player_index = -1
 
-        # how many tricks the other players predicted (players - 1)
-        other_predictions = []
+        # The predictions of all player (players)
+        predictions = []
+
+        # How many tricks the player already achieved (players)
+        achieved_tricks = []
+
+        # How many tricks the player still have to achieve (players)
+        tricks_needed = []
+
         for index, p in enumerate(players):
-            if p != player:
-                other_predictions.append(p.prediction)
-            else:
+            if p == player:
                 player_index = index
+            predictions.append(p.prediction)
+            tricks = p.get_state()[1]
+            achieved_tricks.append(tricks)
+            tricks_needed.append(p.prediction - tricks)
 
         # the position of the player
         player_position = 0
@@ -182,23 +188,19 @@ class FullFeaturizer(Featurizer):
                     player_position += 1
         assert player_position < len(players)
         player_position_arr = K.utils.to_categorical(player_position, num_classes=len(players))
+
+        # How many tricks are left
         tricks_left = len(player.hand)
 
         # indicator for how aggressive the player should try to get tricks
-        playing_style = tricks_left - (prediction + sum(other_predictions))
-
-        # How many tricks the player already achieved
-        achieved_tricks = player.get_state()[1]
-
-        # How many tricks the player still has to achieve
-        tricks_needed = prediction - achieved_tricks
+        playing_style = tricks_left - (sum(predictions))
 
         feature_arr = np.concatenate(
             (hand_arr, trick_arr, trump_color, played_cards_arr, player_color_left, color_left_indicator.flatten(),
-             np.array(other_predictions), player_position_arr,
-             np.array([prediction, tricks_left, playing_style, achieved_tricks, tricks_needed])), axis=None)
+             np.array(predictions), np.array(achieved_tricks), np.array(tricks_needed), player_position_arr,
+             np.array([tricks_left, playing_style])), axis=None)
 
         return feature_arr
 
     def state_dimension(self):
-        return 519
+        return 525
