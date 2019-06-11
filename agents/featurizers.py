@@ -201,4 +201,4 @@ class FullFeaturizer(Featurizer):
         return feature_arr
 
     def state_dimension(self):
-        return 520
+        return 519
