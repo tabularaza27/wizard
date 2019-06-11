@@ -187,12 +187,18 @@ class FullFeaturizer(Featurizer):
         # indicator for how aggressive the player should try to get tricks
         playing_style = tricks_left - (prediction + sum(other_predictions))
 
+        # How many tricks the player already achieved
+        achieved_tricks = player.get_state()[1]
+
+        # How many tricks the player still has to achieve
+        tricks_needed = prediction - achieved_tricks
+
         feature_arr = np.concatenate(
             (hand_arr, trick_arr, trump_color, played_cards_arr, player_color_left, color_left_indicator.flatten(),
              np.array(other_predictions), player_position_arr,
-             np.array([prediction, tricks_left, playing_style])), axis=None)
+             np.array([prediction, tricks_left, playing_style, achieved_tricks, tricks_needed])), axis=None)
 
         return feature_arr
 
     def state_dimension(self):
-        return 517
+        return 520
