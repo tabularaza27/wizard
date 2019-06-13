@@ -47,7 +47,7 @@ def calculate_win_percentage(scores):
     return win_dict
 
 
-self_play = False
+self_play = True
 report_after_games = 100
 games = 2000000
 rl_agent = TFAgentsPPOAgent()
@@ -85,14 +85,14 @@ file_writer_p4 = tf.contrib.summary.create_file_writer(
 file_writers = [file_writer_p1, file_writer_p2, file_writer_p3, file_writer_p4]
 
 # Run the tensorboard in a separate thread / alternativley comment this an run tensorboard in seperate terminal
-t = threading.Thread(target=launch_tensor_board, args=([]))
-t.start()
+# t = threading.Thread(target=launch_tensor_board, args=([]))
+# t.start()
 ### Tensorboard Stuff end ###
 
 # Runs the Game and Reports to Tensorboard
 scores = np.empty(shape=(games, len(players)))
 for i in range(games):
-    # print("{}/{}".format(i, games))
+    print("{}/{}".format(i, games))
 
     # play game
     wiz = Game(players=players)
@@ -110,6 +110,15 @@ for i in range(games):
                 if hasattr(players[index], 'predictor'):
                     tf.contrib.summary.scalar("4_predictor_loss", players[index].predictor.current_loss, step=i)
                     tf.contrib.summary.scalar("3_predictor_acc", players[index].predictor.current_acc, step=i)
+                    # prediction difference
+                    tf.contrib.summary.scalar("5_prediction_differences", np.mean(players[index].predictor.prediction_differences), step=i)
+                    tf.contrib.summary.histogram("dist_prediction_differences", players[index].predictor.prediction_differences, step=i)
+                    players[index].predictor.prediction_differences = []
+                    # add distribution / mean of predictions for all rounds played and for every round (# cards)
+                    for amount_cards in range(0, 16):
+                        tf.contrib.summary.scalar("_{}_mean_prediction".format(amount_cards), np.mean(players[index].predictor.predictions[amount_cards]))
+                        tf.contrib.summary.histogram("_{}_predictions".format(amount_cards), players[index].predictor.predictions[amount_cards], step=i)
+                        players[index].predictor.predictions[amount_cards] = []
                 if isinstance(players[index], RLAgent):
                     tf.contrib.summary.scalar("5_valid_rate", players[index].valid_rate, step=i)
         rl_agent.save_models(i)

@@ -58,7 +58,7 @@ class Predictor:
         self.verbose = verbose
         self.keep_models_fixed = keep_models_fixed
 
-        # keep track of current loss and acc of predictor
+        # keep track of current loss and acc of predictor for tensorboard plotting
         self.current_loss = None
         self.current_acc = None
 
@@ -69,10 +69,11 @@ class Predictor:
             self._build_new_model()
 
         # stores the predictions made by the predictor (statistics)
-        self._predictions = []
+        # 0 stores all the predictions, the other keys correspond to the number of cards
+        self.predictions = {i: [] for i in range(0, 16)}
 
         # stores the absolute difference to the predictions (statistics)
-        self._prediction_differences = []
+        self.prediction_differences = []
 
     def _build_prediction_to_expected_num_points_matrix(self):
         # We can describe the calculation from the output of the NN
@@ -139,7 +140,8 @@ class Predictor:
         expected_value = (self.prediction_to_points * probability_distributions).sum(axis=1)
 
         prediction = int(np.argmax(expected_value))
-        self._predictions.append(prediction)
+        self.predictions[0].append(prediction)
+        self.predictions[len(initial_cards)].append(prediction)
 
         prediction_encoded = K.utils.to_categorical(prediction, num_classes=self.y_dim)
         x = np.append(x, prediction_encoded)
@@ -163,7 +165,7 @@ class Predictor:
 
         prediction_encoded = x[-self.y_dim:]
         prediction = np.argmax(prediction_encoded)
-        self._prediction_differences.append(abs(prediction - num_tricks_achieved))
+        self.prediction_differences.append(abs(prediction - num_tricks_achieved))
 
         self.x_batch[self.batch_position] = x
         self.y_batch[self.batch_position] = y
@@ -185,8 +187,8 @@ class Predictor:
             self.batch_position = 0
 
             if self.verbose:
-                print("Mean Prediction: ", np.mean(self._predictions))
-                print("Std Prediction: ", np.std(self._predictions))
-                print("Abs Prediction difference: ", np.mean(self._prediction_differences))
-            self._predictions = []
-            self._prediction_differences = []
+                print("Mean Prediction: ", np.mean(self.predictions[0]))
+                print("Std Prediction: ", np.std(self.predictions[0]))
+                print("Abs Prediction difference: ", np.mean(self.prediction_differences))
+            # self.predictions = {i: [] for i in range(0, 16)}
+            # self.prediction_differences = []
