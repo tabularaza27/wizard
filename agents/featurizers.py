@@ -8,7 +8,7 @@ from typing import List, Dict
 
 class Featurizer:
     def transform(self, player: Player, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
-                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray):
+                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray, first_player_index: int):
         """
         Transforms the state into a numpy feature vector.
 
@@ -24,6 +24,7 @@ class Featurizer:
             color_left_indicator: (np.array) matrix with shape (players - 1, 4) which contains information
                 about if a player has a certain suit left based on following the suit in past rounds.
                 If the player i don't has color j left, then color_left_indicator[i, j] = 1, else it is 0.
+            first_player_index: Index of the first player in the trick
         Returns:
             state: The state encoded into a numpy 1-d array.
         """
@@ -84,7 +85,7 @@ class OriginalFeaturizer(Featurizer):
         self.count_cards = count_cards
 
     def transform(self, player: Player, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
-                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray):
+                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray, first_player_index: int):
         hand_arr = self.cards_to_arr(player.hand)
 
         trick_cards = filter(lambda card: not card is None, played.values())
@@ -134,7 +135,7 @@ class OriginalFeaturizer(Featurizer):
 class FullFeaturizer(Featurizer):
 
     def transform(self, player: Player, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
-                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray):
+                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray, first_player_index: int):
         # cards in the hand of the player (players x 54)
         hand_arr = self.cards_to_arr(player.hand)
 
@@ -160,8 +161,6 @@ class FullFeaturizer(Featurizer):
 
         played_cards_arr = np.concatenate(tuple(played_cards_arr))
 
-        player_index = -1
-
         # The predictions of all player (players)
         predictions = []
 
@@ -171,34 +170,29 @@ class FullFeaturizer(Featurizer):
         # How many tricks the player still have to achieve (players)
         tricks_needed = []
 
-        for index, p in enumerate(players):
-            if p == player:
-                player_index = index
+        for p in players:
             predictions.append(p.prediction)
             tricks = p.get_state()[1]
             achieved_tricks.append(tricks)
             tricks_needed.append(p.prediction - tricks)
 
         # the position of the player
-        player_position = 0
-        max_cards = max(len(cards) for cards in played_in_round.values())
-        if not len(played_in_round[player_index]) == max_cards:
-            for cards in played_in_round.values():
-                if len(cards) == max_cards:
-                    player_position += 1
-        assert player_position < len(players)
+        player_position = first_player_index
+        while players[player_position] != player:
+            player_position = (player_position + 1) % len(players)
+
         player_position_arr = K.utils.to_categorical(player_position, num_classes=len(players))
 
         # How many tricks are left
         tricks_left = len(player.hand)
 
         # indicator for how aggressive the player should try to get tricks
-        playing_style = tricks_left - (sum(predictions))
+        playing_style = tricks_left - sum(predictions)
 
         feature_arr = np.concatenate(
             (hand_arr, trick_arr, trump_color, played_cards_arr, player_color_left, color_left_indicator.flatten(),
              np.array(predictions), np.array(achieved_tricks), np.array(tricks_needed), player_position_arr,
-             np.array([tricks_left, playing_style])), axis=None)
+             np.array([tricks_left, playing_style])))
 
         return feature_arr
 

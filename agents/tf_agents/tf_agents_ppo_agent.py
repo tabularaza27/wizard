@@ -165,7 +165,7 @@ class TFAgentsPPOAgent(RLAgent):
         self.clone_counter += 1
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(self.clone_counter),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor,
-            keep_models_fixed=self.keep_models_fixed)
+            keep_models_fixed=self.keep_models_fixed, featurizer=self.featurizer)
 
     def save_models(self, global_step: int):
         """Save actor, critic and predictor

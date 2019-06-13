@@ -49,7 +49,7 @@ class Trick(object):
             player = self.players[player_index]
             played_card = player.play_card(self.trump_card, first_card,
                                            trick_cards, self.players,
-                                           self.played_cards_in_round)
+                                           self.played_cards_in_round, self.first_player)
 
             trick_cards[player_index] = played_card
             self.played_cards_in_round[player_index].append(played_card)

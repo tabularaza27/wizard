@@ -68,7 +68,7 @@ class RuleBasedAgent(player.Player):
         else:
             self.round += 1
 
-    def play_card(self, trump, first, played, players, played_in_game):
+    def play_card(self, trump, first, played, players, played_in_game, first_player_index):
         """
         Finds the card whose win probability most closely matches that of the win desirability
         :param trump:
@@ -76,6 +76,7 @@ class RuleBasedAgent(player.Player):
         :param played:
         :param players:
         :param played_in_game:
+        :param first_player_index
         :return: best_card
         """
         played = list(filter(lambda card: not card is None, played.values()))

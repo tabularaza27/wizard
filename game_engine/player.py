@@ -56,7 +56,7 @@ class Player:
             # Cannot follow suit, use ANY card.
             return self.hand
 
-    def play_card(self, trump, first, played, players, played_in_round):
+    def play_card(self, trump, first, played, players, played_in_round, first_player_index):
         raise NotImplementedError("This needs to be implemented by your Player class")
 
     def get_prediction(self, trump, num_players):
@@ -85,7 +85,7 @@ class RandomPlayer(Player):
         super().__init__()
 
     def play_card(self, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
-                  played_in_round: Dict[int, List[Card]]):
+                  played_in_round: Dict[int, List[Card]], first_player_index: int):
         """Randomly play any VALID card.
 
         Args:
@@ -96,6 +96,7 @@ class RandomPlayer(Player):
             players: list of players in the game. Not used in random player
             played_in_round: dict of played cards in the round for each player.
                 The key is the index of the player who played that cards.
+            first_player_index: Index of the first player in the trick
 
         Returns:
             Card: the chosen card from the player hand to play in the current trick

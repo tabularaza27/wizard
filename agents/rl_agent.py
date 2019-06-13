@@ -62,8 +62,7 @@ class RLAgent(AverageRandomPlayer):
 
         # keep track of which colors other players don't have based on if they follow the suit
         self.color_left_indicator = np.zeros((PLAYER - 1, 4))
-        self.last_first = None
-        self.round_index = 0
+        self.trick_index = 0
 
         # TODO remove this when the plotting functionality is there,
         # should be able to handle this easier
@@ -105,7 +104,7 @@ class RLAgent(AverageRandomPlayer):
         return action_mask
 
     def play_card(self, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
-                  played_in_round: Dict[int, List[Card]]):
+                  played_in_round: Dict[int, List[Card]], first_player_index: int):
         """Plays a card based on the agents action"""
 
         # TODO replace this print with the corresponding plotting once
@@ -119,10 +118,10 @@ class RLAgent(AverageRandomPlayer):
             self.not_yet_given_reward = None
 
         # keep track of which colors the other players have
-        self._update_color_information(first, players, played_in_round)
+        self._update_color_information(first, players, played_in_round, first_player_index)
 
         state = self.featurizer.transform(self, trump, first, played, players, played_in_round,
-                                          self.color_left_indicator)
+                                          self.color_left_indicator, first_player_index)
 
         action = self.act(state, self._valid_action_mask(first))
 
@@ -141,7 +140,7 @@ class RLAgent(AverageRandomPlayer):
         # we give him a negative reward, play a random card and continue
         self.last_10000_cards_played_valid.append(0)
         self.not_yet_given_reward = -10
-        return super().play_card(trump, first, played, players, played_in_round)
+        return super().play_card(trump, first, played, players, played_in_round, first_player_index)
 
     def get_prediction(self, trump: Card, num_players: int):
         """Return the round prediction using the build in NN Predictor"""
@@ -157,23 +156,39 @@ class RLAgent(AverageRandomPlayer):
         self.not_yet_given_reward = None
         self.predictor.add_game_result(self.prediction_x, num_tricks_achieved)
 
-    def _update_color_information(self, first, players, played_in_round):
-        """Updates self.color_left_indicator based on if the other players followed the suit druing the last round"""
+    def _update_color_information(self, first, players, played_in_round, first_player_index):
+        """Updates self.color_left_indicator based on if the other players followed the suit during the last round"""
+
+        # if a player hasn't played cards during the round, it's the first trick in the round
         if min(len(cards) for cards in played_in_round.values()) == 0:
             self.color_left_indicator = np.zeros((PLAYER - 1, 4))
-            self.last_first = None
-            self.round_index = 0
+            self.trick_index = 0
 
-        if self.last_first is not None and self.round_index > 0:
+        # we only infer the color of other players from last rounds
+        if self.trick_index > 0:
+            # The first card that was played during the last trick
+            last_first = played_in_round[(first_player_index - 1) % len(players)][self.trick_index - 1]
+            assert last_first is not None
+
+            # when a jester is played, the next card determines the suit to follow
+            player_index = first_player_index
+            while played_in_round[player_index][self.trick_index - 1] == Card("White", 0):
+                player_index = (player_index + 1) % len(players)
+                last_first = played_in_round[player_index][self.trick_index - 1]
+
+                # in case everybody plays a jester
+                if player_index == first_player_index:
+                    break
+
             color_indicator_index = 0
             for index, player in enumerate(players):
                 if not player == self:
-                    if not self._follows_suit(first, played_in_round[index][self.round_index - 1]):
-                        self.color_left_indicator[color_indicator_index][Card.colors.index(first.color) - 1] = 1
+                    if not self._follows_suit(last_first, played_in_round[index][self.trick_index - 1]):
+                        self.color_left_indicator[color_indicator_index][Card.colors.index(last_first.color) - 1] = 1
                     color_indicator_index += 1
 
-        self.round_index += 1
-        self.last_first = first
+        self.trick_index += 1
 
-    def _follows_suit(self, first, card):
-        return first is None or card.color == 'White' or first.color == 'White' or first.color == card.color
+    @staticmethod
+    def _follows_suit(first, card):
+        return card.color == 'White' or first.color == 'White' or first.color == card.color
