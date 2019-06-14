@@ -4,7 +4,7 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow.keras as K
 
-from agents.original.featurizers import OriginalFeaturizer
+from agents.featurizers import Featurizer
 from game_engine.card import Card
 
 logdir = '/logs'
@@ -124,8 +124,8 @@ class Predictor:
               whichever has the highest expected reward
         """
 
-        x = np.array(OriginalFeaturizer.cards_to_arr(initial_cards) +
-                     OriginalFeaturizer.color_to_bin_arr(trump_color_card))
+        x = np.concatenate((Featurizer.cards_to_arr(initial_cards),
+                     Featurizer.color_to_bin_arr(trump_color_card)))
 
         X = np.tile(x, (self.y_dim, 1))
 

@@ -12,7 +12,7 @@ import tf_agents.replay_buffers
 from tensorflow.contrib.framework import TensorSpec, BoundedTensorSpec
 from tf_agents.replay_buffers.tf_uniform_replay_buffer import TFUniformReplayBuffer
 
-from agents.rl_agent import RLAgent, STATE_DIMENSIONS, ACTION_DIMENSIONS, MODELS_PATH
+from agents.rl_agent import RLAgent, ACTION_DIMENSIONS, MODELS_PATH
 from agents.tf_agents.layers import equal_spacing_fc
 from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwork
 
@@ -26,8 +26,8 @@ def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
 
 class TFAgentsPPOAgent(RLAgent):
     def __init__(self, name=None, actor_net=None, value_net=None,
-            predictor=None, keep_models_fixed=False):
-        super().__init__(name, predictor, keep_models_fixed)
+            predictor=None, keep_models_fixed=False, featurizer=None):
+        super().__init__(name, predictor, keep_models_fixed, featurizer)
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
 
@@ -35,11 +35,11 @@ class TFAgentsPPOAgent(RLAgent):
         # given to the agent in order to get an association between these two
         # see also https://github.com/tensorflow/agents/issues/125#issuecomment-496583325
         observation_spec = {
-            'state': TensorSpec((STATE_DIMENSIONS,), tf.float32),
+            'state': TensorSpec((self.featurizer.state_dimension(),), tf.float32),
             'mask': TensorSpec((ACTION_DIMENSIONS,), tf.float32)
         }
 
-        layers = equal_spacing_fc(5)
+        layers = equal_spacing_fc(5, self.featurizer.state_dimension())
 
         if actor_net is None:
             self.actor_net = MaskedActorNetwork(observation_spec, action_spec, layers)
@@ -149,7 +149,7 @@ class TFAgentsPPOAgent(RLAgent):
         # additionally to the reward. Because that makes no sense for us,
         # we just give it an observation consisting of all-zeros
         new_time_step = _to_tf_timestep(ts.termination({
-            'state': np.zeros(STATE_DIMENSIONS),
+            'state': np.zeros(self.featurizer.state_dimension()),
             'mask': np.zeros(ACTION_DIMENSIONS)
         }, reward))
 
@@ -165,7 +165,7 @@ class TFAgentsPPOAgent(RLAgent):
         self.clone_counter += 1
         return TFAgentsPPOAgent(name=self.name + 'Clone' + str(self.clone_counter),
             actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor,
-            keep_models_fixed=self.keep_models_fixed)
+            keep_models_fixed=self.keep_models_fixed, featurizer=self.featurizer)
 
     def save_models(self, global_step: int):
         """Save actor, critic and predictor

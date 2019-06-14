@@ -1,7 +1,7 @@
 import numpy as np
 
-from agents import predictors
-from agents.original import featurizers, estimators, policies
+from agents import predictors, featurizers
+from agents.original import estimators, policies
 from game_engine import player
 
 
@@ -35,7 +35,7 @@ class OriginalRLAgent(player.AverageRandomPlayer):
         self.old_action = None
 
 
-    def play_card(self, trump, first, played, players, played_in_game):
+    def play_card(self, trump, first, played, players, played_in_game, first_player_index):
         """Plays a card according to the estimator Q function and learns
         on-line.
         Relies on scores being updated by the environment to calculate reward.
@@ -47,13 +47,14 @@ class OriginalRLAgent(player.AverageRandomPlayer):
             player.
             played_in_game: (list(Card)) list of cards played so far in the
             game, may be empty.
+            first_player_index: Index of the first player in the trick
 
         Returns:
             card_to_play: (Card) the card object that the player
              decided to play.
         """
         state = self.featurizer.transform(self, trump, first, played, players,
-                                          played_in_game)
+                                          played_in_game, None)
         terminal = False
         if self.old_state is not None and self.old_action is not None:
             r = self.reward
