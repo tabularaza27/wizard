@@ -187,7 +187,7 @@ class FullFeaturizer(Featurizer):
         tricks_left = len(player.hand)
 
         # indicator for how aggressive the player should try to get tricks
-        playing_style = tricks_left - sum(predictions)
+        playing_style = tricks_left - np.sum(np.maximum(tricks_needed, 0))
 
         feature_arr = np.concatenate(
             (hand_arr, trick_arr, trump_color, played_cards_arr, player_color_left, color_left_indicator.flatten(),
