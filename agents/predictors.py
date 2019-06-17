@@ -4,10 +4,11 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow.keras as K
 
-from agents.featurizers import Featurizer
+from agents.featurizers import FullFeaturizer
 from game_engine.card import Card
 
 logdir = '/logs'
+
 
 class Predictor:
     """Predictor object, predicts the number of tricks achieved in a round.
@@ -62,6 +63,9 @@ class Predictor:
         self.current_loss = None
         self.current_acc = None
 
+        # keep track of current round, is needed for reporting purposes
+        self.current_round = 0
+
         self.model_path = model_path + str(max_num_tricks) + '.h5'
         if os.path.isfile(self.model_path):
             self.model = K.models.load_model(self.model_path)
@@ -70,7 +74,9 @@ class Predictor:
 
         # stores the predictions made by the predictor (statistics)
         # 0 stores all the predictions, the other keys correspond to the number of cards
-        self.predictions = {i: [] for i in range(0, 16)}
+        self.predictions = {"overall": {i: [] for i in range(0, 16)},
+                            "correct_prediction": {i: [] for i in range(0, 16)},
+                            "incorrect_prediction": {i: [] for i in range(0, 16)}}
 
         # stores the absolute difference to the predictions (statistics)
         self.prediction_differences = []
@@ -124,9 +130,10 @@ class Predictor:
             - The predicted number of tricks based on
               whichever has the highest expected reward
         """
+        self.current_round = len(initial_cards)
 
-        x = np.concatenate((Featurizer.cards_to_arr(initial_cards),
-                     Featurizer.color_to_bin_arr(trump_color_card)))
+        x = np.concatenate((FullFeaturizer.cards_to_arr(initial_cards),
+                            FullFeaturizer.color_to_bin_arr(trump_color_card)))
 
         X = np.tile(x, (self.y_dim, 1))
 
@@ -140,8 +147,6 @@ class Predictor:
         expected_value = (self.prediction_to_points * probability_distributions).sum(axis=1)
 
         prediction = int(np.argmax(expected_value))
-        self.predictions[0].append(prediction)
-        self.predictions[len(initial_cards)].append(prediction)
 
         prediction_encoded = K.utils.to_categorical(prediction, num_classes=self.y_dim)
         x = np.append(x, prediction_encoded)
@@ -165,6 +170,14 @@ class Predictor:
 
         prediction_encoded = x[-self.y_dim:]
         prediction = np.argmax(prediction_encoded)
+
+        # store prediction values for reporting
+        if prediction == num_tricks_achieved:
+            self.predictions["correct_prediction"].append(prediction)
+        else:
+            self.predictions["incorrect_prediction"].append(prediction)
+        self.predictions["overall"][0].append(prediction)
+        self.predictions["overall"][self.current_round].append(prediction)
         self.prediction_differences.append(abs(prediction - num_tricks_achieved))
 
         self.x_batch[self.batch_position] = x
