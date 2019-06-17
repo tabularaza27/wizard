@@ -1,4 +1,4 @@
-"""wizard_site URL Configuration
+"""main URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/2.2/topics/http/urls/
@@ -14,9 +14,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('platform.urls'))
+    path('', views.WizardGameManager.as_view(), name="start_game"),
+    path('game/', views.WizardGameManager.play_game, name="play_game"),
+    path('game/round/<int:round>/', views.play_round, name="play_round"),
+    path('game/round/<int:round>/prediction/', views.ask_prediction, name="ask_prediction"),
+    path('game/round/<int:round>/prediction/<int:prediction>/', views.get_prediction, name="get_prediction"),
+    path('game/round/<int:round>/trick/<int:trick>/', views.play_trick, name="play_trick"),
 ]
