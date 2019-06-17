@@ -33,7 +33,7 @@ class Round:
         self.trump_card = None
         # -1 adjusts for 1-index in game numbers and 0-index in players
         self.first_player = (round_num - 1) % len(players)
-        self.played_cards = []
+        self.played_cards = dict()
 
     def play_round(self):
         """Plays on round. Determines Trump Color. Asks for Predictions. Play all Tricks. Determine Scores for each Player
@@ -41,16 +41,18 @@ class Round:
         Returns:
             list of int: scores for each player
         """
-        # print("Playing game #{}".format(self.game_num))
-        # New game, new deck. No played cards.
-        self.played_cards = []
+        # Holds the played cards for each player (index of player in players are the keys)
+        self.played_cards = dict()
+        for index, player in enumerate(self.players):
+            self.played_cards[index] = []
+
         # Determining the Trump Color
         self.trump_card = self.distribute_cards()[0]
+
         if self.trump_card is None:
             # We distributed all cards, the trump is N. (No trump)
             self.trump_card = Card("White", 0)
-        else:
-            self.played_cards.append(self.trump_card)
+
         if self.trump_card.value == 14:
             # Trump card is a Z, ask the dealer for a trump color.
             self.trump_card.color =\
@@ -61,7 +63,7 @@ class Round:
         # print("Final predictions {}".format(self.predictions))
 
         # Reset and initialize all wins.
-        wins = [0]*len(self.players)
+        wins = [0] * len(self.players)
         for i, player in enumerate(self.players):
             player.wins = wins[i]
 
@@ -69,11 +71,11 @@ class Round:
             # Play a trick for each card in the hand (or round number).
             trick = Trick(self.trump_card, self.players, self.first_player, self.played_cards)
             winner, trick_cards = trick.play_trick()
+
             # Trick winner gets a win and starts the next trick.
             wins[winner] += 1
             self.first_player = winner
-            # Round keeps track of the played cards.
-            self.played_cards += trick_cards
+
             # Update wins
             for i, player in enumerate(self.players):
                 player.wins = wins[i]

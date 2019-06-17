@@ -2,6 +2,7 @@
 
 import random
 import collections
+from typing import List, Dict
 
 from game_engine.card import Card
 
@@ -55,7 +56,7 @@ class Player:
             # Cannot follow suit, use ANY card.
             return self.hand
 
-    def play_card(self, trump, first, played, players, played_in_game):
+    def play_card(self, trump, first, played, players, played_in_round, first_player_index):
         raise NotImplementedError("This needs to be implemented by your Player class")
 
     def get_prediction(self, trump, num_players):
@@ -83,15 +84,19 @@ class RandomPlayer(Player):
     def __init__(self):
         super().__init__()
 
-    def play_card(self, trump, first, played_in_round, players, played_in_game):
+    def play_card(self, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
+                  played_in_round: Dict[int, List[Card]], first_player_index: int):
         """Randomly play any VALID card.
 
         Args:
-            trump (Card): trump of the current round
-            first (Card): first card played in the current trick
-            played_in_round (:obj: `list` of `Card`): list of cards played in the round. Not used in random player
-            players (:obj: `list` of `Player`): list of players in the game. Not used in random player
-            played_in_game (:obj: `list` of `Card`): list of cards played in the game. Not used in random player
+            trump: trump of the current round
+            first: first card played in the current trick
+            played: dict of played cards in the trick. The key is the index of the player
+                who played that card. The card is None if no card was played from the player yet. Not used in random player
+            players: list of players in the game. Not used in random player
+            played_in_round: dict of played cards in the round for each player.
+                The key is the index of the player who played that cards.
+            first_player_index: Index of the first player in the trick
 
         Returns:
             Card: the chosen card from the player hand to play in the current trick

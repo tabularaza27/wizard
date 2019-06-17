@@ -11,6 +11,7 @@ class Trick(object):
         played_cards_in_round(:obj: `list` of :obj: `Card`): list of cards already played in the round
                                                              (a round consists of several tricks)
     """
+
     def __init__(self, trump_card, players, first_player, played_cards_in_round):
         """
         Args:
@@ -36,17 +37,22 @@ class Trick(object):
         winning_card = None
         winning_player = None
         num_players = len(self.players)
-        trick_cards = []
+
+        # dictionary (player index, card) which determines which player played which card during the trick
+        trick_cards = dict()
+        for index, player in enumerate(self.players):
+            trick_cards[index] = None
 
         for i in range(len(self.players)):
             # Start with the first player and ascend, then reset at 0.
-            player_index = (self.first_player+i) % num_players
+            player_index = (self.first_player + i) % num_players
             player = self.players[player_index]
             played_card = player.play_card(self.trump_card, first_card,
                                            trick_cards, self.players,
-                                           self.played_cards_in_round)
-            # print("Player {} played {}".format(player_index, played_card))
-            trick_cards.append(played_card)
+                                           self.played_cards_in_round, self.first_player)
+
+            trick_cards[player_index] = played_card
+            self.played_cards_in_round[player_index].append(played_card)
 
             # if it is the first card played in the trick
             # set first card played to determine suit to follow, if first card is N there is no suit in the trick
@@ -54,10 +60,10 @@ class Trick(object):
                 first_card = played_card
 
             # determine if current player is new winner of the trick
-            if winning_player is None or Trick.is_new_winner(new_card=played_card, old_card=winning_card, trump=self.trump_card, first_card=first_card):
+            if winning_player is None or Trick.is_new_winner(new_card=played_card, old_card=winning_card,
+                                                             trump=self.trump_card, first_card=first_card):
                 winning_card = played_card
                 winning_player = player_index
-            # print("First card:{}, Trump card:{}, Winning:{}".format(first_card,self.trump_card,winning_player))
 
         return winning_player, trick_cards
 
