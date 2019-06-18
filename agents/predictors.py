@@ -173,9 +173,12 @@ class Predictor:
 
         # store prediction values for reporting
         if prediction == num_tricks_achieved:
-            self.predictions["correct_prediction"].append(prediction)
+            self.predictions["correct_prediction"][0].append(prediction)
+            self.predictions["correct_prediction"][self.current_round].append(prediction)
         else:
-            self.predictions["incorrect_prediction"].append(prediction)
+            self.predictions["incorrect_prediction"][0].append(prediction)
+            self.predictions["incorrect_prediction"][self.current_round].append(prediction)
+
         self.predictions["overall"][0].append(prediction)
         self.predictions["overall"][self.current_round].append(prediction)
         self.prediction_differences.append(abs(prediction - num_tricks_achieved))
@@ -199,9 +202,9 @@ class Predictor:
             self.buffer_filled = True
             self.batch_position = 0
 
-            if self.verbose:
-                print("Mean Prediction: ", np.mean(self.predictions[0]))
-                print("Std Prediction: ", np.std(self.predictions[0]))
-                print("Abs Prediction difference: ", np.mean(self.prediction_differences))
-            # self.predictions = {i: [] for i in range(0, 16)}
+            # if self.verbose:
+            #     print("Mean Prediction: ", np.mean(self.predictions[0]))
+            #     print("Std Prediction: ", np.std(self.predictions[0]))
+            #     print("Abs Prediction difference: ", np.mean(self.prediction_differences))
+            # # self.predictions = {i: [] for i in range(0, 16)}
             # self.prediction_differences = []

@@ -119,19 +119,19 @@ for i in range(games):
                     # for all predictions / correct predictions / incorrect predictions
                     for amount_cards in range(0, 16):
                         # mean predictions
-                        tf.contrib.summary.scalar("6_overall_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["overall"][amount_cards]))
-                        tf.contrib.summary.scalar("7_correct_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["correct"][amount_cards]))
-                        tf.contrib.summary.scalar("8_incorrect_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["incorrect"][amount_cards]))
+                        tf.contrib.summary.scalar("6_overall_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["overall"][amount_cards]), step=i)
+                        tf.contrib.summary.scalar("7_correct_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["correct_prediction"][amount_cards]), step=i)
+                        tf.contrib.summary.scalar("8_incorrect_mean_predictions_{}".format(amount_cards), np.mean(players[index].predictor.predictions["incorrect_prediction"][amount_cards]), step=i)
 
                         # prediction distributions
                         tf.contrib.summary.histogram("2_overall_predictions_{}".format(amount_cards), players[index].predictor.predictions["overall"][amount_cards], step=i)
-                        tf.contrib.summary.histogram("3_correct_predictions_{}".format(amount_cards), players[index].predictor.predictions["correct"][amount_cards], step=i)
-                        tf.contrib.summary.histogram("3_incorrect_predictions_{}".format(amount_cards), players[index].predictor.predictions["incorrect"][amount_cards], step=i)
+                        tf.contrib.summary.histogram("3_correct_predictions_{}".format(amount_cards), players[index].predictor.predictions["correct_prediction"][amount_cards], step=i)
+                        tf.contrib.summary.histogram("3_incorrect_predictions_{}".format(amount_cards), players[index].predictor.predictions["incorrect_prediction"][amount_cards], step=i)
 
                         # reset predictions variable
                         players[index].predictor.predictions["overall"][amount_cards] = []
-                        players[index].predictor.predictions["correct"][amount_cards] = []
-                        players[index].predictor.predictions["incorrect"][amount_cards] = []
+                        players[index].predictor.predictions["correct_prediction"][amount_cards] = []
+                        players[index].predictor.predictions["incorrect_prediction"][amount_cards] = []
 
                 if isinstance(players[index], RLAgent):
                     tf.contrib.summary.scalar("7_valid_rate", players[index].valid_rate, step=i)
