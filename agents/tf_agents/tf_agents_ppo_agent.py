@@ -1,6 +1,7 @@
 # from __future__ import annotations
 
 import os
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -115,7 +116,11 @@ class TFAgentsPPOAgent(RLAgent):
 
         if self.replay_buffer_position == REPLAY_BUFFER_SIZE + 1:
             if not self.keep_models_fixed:
+                print('starting agent training')
+                start = time.time()
                 self.agent.train(self.replay_buffer.gather_all())
+                end = time.time()
+                print('finished agent training, took', end - start, 'seconds')
             self.replay_buffer_position = 0
             self.replay_buffer.clear()
 
@@ -127,15 +132,19 @@ class TFAgentsPPOAgent(RLAgent):
 
         if self.last_time_step is None:
             # a new episode started
+            self.policy_state = self.policy.get_initial_state(1)
             self.last_time_step = _to_tf_timestep(ts.restart(observation))
-            self.last_action_step = self.policy.action(self.last_time_step)
+            self.last_action_step = self.policy.action(
+                self.last_time_step, self.policy_state)
+            self.policy_state = self.last_action_step.state
             return self.last_action_step.action.numpy()[0,0]
 
         new_time_step = _to_tf_timestep(ts.transition(observation, self.prev_reward))
         self._add_trajectory(self.last_time_step, self.last_action_step, new_time_step)
 
         self.last_time_step = new_time_step
-        self.last_action_step = self.policy.action(new_time_step)
+        self.last_action_step =  self.policy.action(new_time_step, self.policy_state)
+        self.policy_state = self.last_action_step.state
         self.prev_reward = None
 
         return self.last_action_step.action.numpy()[0,0]

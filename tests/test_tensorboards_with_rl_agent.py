@@ -17,6 +17,7 @@ from agents.rl_agent import RLAgent
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from game_engine.player import AverageRandomPlayer
 from agents.rule_based_agent import RuleBasedAgent
+from agents.featurizers import OriginalFeaturizer
 
 tf.compat.v1.enable_v2_behavior()
 
@@ -50,7 +51,7 @@ def calculate_win_percentage(scores):
 self_play = True
 report_after_games = 100
 games = 2000000
-rl_agent = TFAgentsPPOAgent()
+rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
 
 if self_play:
     players = [rl_agent, rl_agent.clone(), rl_agent.clone(), rl_agent.clone()]
