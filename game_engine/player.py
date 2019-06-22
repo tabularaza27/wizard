@@ -132,8 +132,13 @@ class AverageRandomPlayer(RandomPlayer):
     prediction of wins and a trump color corresponding to
     the color the agent has the most of in its hand."""
 
-    def __init__(self):
+    def __init__(self, name=None):
         super().__init__()
+
+        if name is not None:
+            self.name = name
+        else:
+            self.name = self.__class__.__name__
 
     def get_prediction(self, trump, num_players):
         """Predicts number of tricks corresponding to: #card on hand / # players

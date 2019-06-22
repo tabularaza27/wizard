@@ -74,12 +74,10 @@ class TFAgentsPPOAgent(RLAgent):
             normalize_observations=False,
         )
 
-
         if actor_net is not None or value_net is not None:
             self.agent.initialize()
         else:
-            self.train_checkpointer = tf_agents.utils.common.Checkpointer(
-                ckpt_dir=os.path.join(MODELS_PATH, self.name, 'Agent'), agent=self.agent)
+            self._create_train_checkpointer()
             self.train_checkpointer.initialize_or_restore()
 
         # it seems like there is also agent.policy. I still don't understand when
@@ -100,6 +98,10 @@ class TFAgentsPPOAgent(RLAgent):
         self.replay_buffer_position = 0
 
         self.clone_counter = 0
+
+    def _create_train_checkpointer(self):
+        self.train_checkpointer = tf_agents.utils.common.Checkpointer(
+            ckpt_dir=os.path.join(MODELS_PATH, self.name, 'Agent'), agent=self.agent)
 
     def _add_trajectory(self, prev_time_step, action, new_time_step):
         """Add a trajectory (prev_time_step, action, new_time_step) to the replay buffer
@@ -159,15 +161,18 @@ class TFAgentsPPOAgent(RLAgent):
         self.last_action_step = None
         self.prev_reward = None
 
-    def clone(self):
+    def clone(self, name=None):
         """Return a clone of this agent with networks & predictor shared"""
 
-        self.clone_counter += 1
-        return TFAgentsPPOAgent(name=self.name + 'Clone' + str(self.clone_counter),
-            actor_net=self.actor_net, value_net=self.value_net, predictor=self.predictor,
+        if name is None:
+            self.clone_counter += 1
+            name = self.name + 'Clone' + str(self.clone_counter)
+
+        return TFAgentsPPOAgent(name=name, actor_net=self.actor_net,
+            value_net=self.value_net, predictor=self.predictor,
             keep_models_fixed=self.keep_models_fixed, featurizer=self.featurizer)
 
-    def save_models(self, global_step: int):
+    def save_models(self):
         """Save actor, critic and predictor
 
         Args:
@@ -178,5 +183,7 @@ class TFAgentsPPOAgent(RLAgent):
         if self.keep_models_fixed:
             return
 
-        super().save_models()
-        self.train_checkpointer.save(global_step)
+        super().save_models(os.path.join(MODELS_PATH, self.name))
+        if not hasattr(self, 'train_checkpointer'):
+            self._create_train_checkpointer()
+        self.train_checkpointer.save(0)

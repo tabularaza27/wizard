@@ -72,13 +72,18 @@ class RLAgent(AverageRandomPlayer):
         self.last_10000_cards_played_valid = []
         self.valid_rate = 0
 
-    def save_models(self):
+    def save_models(self, path=None):
         if self.keep_models_fixed:
             return
 
-        if not os.path.exists(self.predictor_model_path):
-            os.makedirs(self.predictor_model_path)
-        self.predictor.save_model()
+        if path is None:
+            path = self.predictor_model_path
+        else:
+            path = os.path.join(path, 'Predictor/')
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.predictor.save_model(path)
 
     def act(self, state: np.ndarray, valid_action_mask: np.ndarray) -> Card:
         """Returns the action the model takes if it is in the given state
