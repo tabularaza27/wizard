@@ -443,6 +443,6 @@ def main():
 
 if __name__ == '__main__':
     tf.compat.v1.enable_v2_behavior()
-    tf.InteractiveSession()
+    tf.compat.v1.InteractiveSession()
 
     main()
