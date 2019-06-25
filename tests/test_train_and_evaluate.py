@@ -115,7 +115,26 @@ class AgentPool:
 
         if len(self.pool) < 3:
             return [self.agent] + self.precomputed_clones
-        return [self.agent] + random.sample(self.pool, 3)
+
+        # playing only against past versions makes training 4x slower
+        # because we don't get any experience from those past versions (on policy)
+        # therefore we make some tradeoff here by varying the number
+        # of past versions each game so that we can still get a bit more
+        # experience while not overfitting against the current version
+
+        # Another solution would of course be to use some off policy method
+        # Maybe we should do that but I'm not sure about the number of changes
+        # it would require
+
+        # with p = 0.1 we play against only current versions (-> 3 current versions),
+        # with p = 0.4 we play against 2 current versions, 1 past version
+        # etc.
+        num_past_versions = np.random.choice(4, p=[0.1, 0.4, 0.3, 0.2])
+        num_additional_current_versions = 3 - num_past_versions
+
+        return ([self.agent]
+            + self.precomputed_clones[:num_additional_current_versions]
+            + random.sample(self.pool, num_past_versions))
 
     def add_current_version(self):
         """
