@@ -106,6 +106,7 @@ class AgentPool:
             self._load()
         else:
             os.makedirs(os.path.dirname(path))
+            self.save()
 
         self.precomputed_clones = [self.agent.clone() for p in range(3)]
 
