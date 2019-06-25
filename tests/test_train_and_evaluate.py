@@ -282,7 +282,7 @@ def plot_agents(tb, scores, agents, agents_to_plot):
         tensorboard_plot(agent, agent_tb_view,
             mean_scores[agent_position], win_percentages[agent_position])
 
-def play_games(player_selector, tb, agents_to_plot, flags):
+def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=True):
     """Play games infinitly, plot results and yield the current game number every game
 
     Args:
@@ -293,13 +293,41 @@ def play_games(player_selector, tb, agents_to_plot, flags):
             `player_selector` where data should be plotted
         flags ({ flag_name: flag_value }): Constants used throughout the program,
             usually things like how often stuff should be plotted / saved etc.
+        shuffle_positions (bool): Whether to randomly shuffle the positions of players
+            each game
     """
+
+    def play_game_shuffled(agents):
+        agents_with_positions = list(zip(agents, range(4)))
+        random.shuffle(agents_with_positions)
+
+        shuffled_agents = [agent for agent, old_position in agents_with_positions]
+        shuffled_agents_to_plot = [position for position, (agent, old_position)
+            in enumerate(agents_with_positions) if old_position in agents_to_plot]
+
+        shuffled_scores = Game(players=shuffled_agents).play_game()
+
+        unshuffled_scores = [None] * 4
+        for shuffled_position, (agent, unshuffled_position) in \
+                enumerate(agents_with_positions):
+            unshuffled_scores[unshuffled_position] = shuffled_scores[shuffled_position]
+
+        return unshuffled_scores
+
+    def play_game_unshuffled(agents):
+        return Game(players=agents).play_game()
+
+    def play_game(agents):
+        if shuffle_positions:
+            return play_game_shuffled(agents)
+        return play_game_unshuffled(agents)
 
     scores = []
     for game_num in itertools.count():
         print(game_num)
+
         agents = player_selector()
-        scores.append(Game(players=agents).play_game())
+        scores.append(play_game(agents))
 
         if game_num == 0:
             continue
