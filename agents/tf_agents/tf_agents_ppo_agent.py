@@ -78,7 +78,22 @@ class TFAgentsPPOAgent(RLAgent):
             self.agent.initialize()
         else:
             self._create_train_checkpointer()
-            self.train_checkpointer.initialize_or_restore()
+
+            # All the variables are in fact successfully restored but this is
+            # not done immediately but only once some shapes are known.
+            # Therefore, if the shapes are never known, the variables are not
+            # restored. This is no problem in self play, where all of the shapes
+            # are known after the first training but it is a problem when playing
+            # against old versions because often some of the old versions aren't
+            # used (and also the value net is never used because the old versions
+            # aren't trained). It isn't an error but tensorflow gives warnings at
+            # the end which are confusing if one doesn't know this.
+            # Therefore we silence those warnings with .expect_partial().
+            # For more information see
+            # https://github.com/tensorflow/tensorflow/issues/27937#issuecomment-484683443
+            # https://github.com/tensorflow/tensorflow/issues/27937#issuecomment-488356053
+
+            self.train_checkpointer.initialize_or_restore().expect_partial()
 
         # it seems like there is also agent.policy. I still don't understand when
         # one should use which and why but this one works for now.
