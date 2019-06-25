@@ -66,7 +66,7 @@ class Predictor:
         # keep track of current round, is needed for reporting purposes
         self.current_round = 0
 
-        self.model_path = model_path + str(max_num_tricks) + '.h5'
+        self.model_path = model_path + 'model.h5'
         if os.path.isfile(self.model_path):
             self.model = K.models.load_model(self.model_path)
         else:
@@ -113,8 +113,11 @@ class Predictor:
         self.model.compile(optimizer=K.optimizers.Adam(),
                            loss='categorical_crossentropy', metrics=['accuracy'])
 
-    def save_model(self):
-        self.model.save(self.model_path)
+    def save_model(self, model_path=None):
+        if model_path is None:
+            self.model.save(self.model_path)
+        else:
+            self.model.save(model_path + 'model.h5')
 
     def make_prediction(self, initial_cards: List[Card],
                         trump_color_card: Card) -> Tuple[np.ndarray, int]:

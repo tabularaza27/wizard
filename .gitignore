@@ -1,4 +1,5 @@
 archive/
 tests/models/
 tests/logs/
+tests/pools/
 dependencies/
