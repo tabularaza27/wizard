@@ -17,7 +17,7 @@ import numpy as np
 import tensorflow as tf
 
 from game_engine.game import Game
-from game_engine.player import AverageRandomPlayer
+from game_engine.player import Player, AverageRandomPlayer
 from agents.rl_agent import RLAgent
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from agents.rule_based_agent import RuleBasedAgent
@@ -29,7 +29,12 @@ class TensorboardWrapper:
         self.launch_tensorboard()
 
     def create_logdir(self):
-        path = 'logs/training/'
+        """
+        Create logdir in /logs/$id where $id is counting up.
+        Save the path to self.logdir.
+        """
+
+        path = 'logs/'
 
         test_count = 1
         while os.path.exists(path + str(test_count)):
@@ -53,6 +58,13 @@ class TensorboardWrapper:
         return TensorboardAgentView(self, agent, name)
 
 class TensorboardAgentView:
+    """
+    Giving an instance of this class as an argument to some function makes it easier than
+    working with filewriters directly because the function can just call .scalar(name, value)
+    and doesn't have to keep track of the filewriter, giving game_num as argument every time
+    and using `with self.filewriter.as_default(), ...` around everything.
+    """
+
     def __init__(self, tensorboard_wrapper, agent, name):
         self.tb = tensorboard_wrapper
 
@@ -69,6 +81,19 @@ class TensorboardAgentView:
             tf.contrib.summary.histogram(name, value, step=self.tb.game_num)
 
 class AgentPool:
+    """
+    Keeps track of an (learning) agent and its past versions.
+    Enables easy selection of players for one game so that the agent doesn't overfit
+    against itself. This is done by sampling from the past versions.
+
+    The exact behaviour how sampling happens will probably change, e.g. we might only
+    sample from past versions in N% of the cases or only have a few past versions
+    and the rest being the current version etc.
+
+    Because we use an on-policy method we don't gain experience from the past versions
+    and gain more experience when playing against the current version (but might overfit).
+    """
+
     def __init__(self, main_agent, path=None):
         self.pool = []
         self.agent = main_agent
@@ -85,11 +110,18 @@ class AgentPool:
         self.precomputed_clones = [self.agent.clone() for p in range(3)]
 
     def select_players(self):
+        """Get an array of 4 players which can be used for a new game"""
+
         if len(self.pool) < 3:
             return [self.agent] + self.precomputed_clones
         return [self.agent] + random.sample(self.pool, 3)
 
     def add_current_version(self):
+        """
+        Use the current agent given in __init__(main_agent, ...), clone a fixed version
+        of it and add it to the pool for future random selection by self.select_players.
+        """
+
         clone_name = self.agent.name + '@' + datetime.datetime.now().isoformat()
 
         clone = self.agent.clone(clone_name)
@@ -105,10 +137,20 @@ class AgentPool:
         self.save()
 
     def save(self):
+        """
+        Save a list of names of agents in the pool to self.path (pools/MainPool) by default
+        """
+
         with open(self.path, 'w') as f:
             json.dump([agent.name for agent in self.pool], f, indent=4)
 
     def _load(self):
+        """
+        Use the list of agent names saved previously to create corresponding agents
+        with the same name (assumes that the agent loads its past version by itself
+        when initialized with the same name) and adds all of them to the pool.
+        """
+
         with open(self.path) as f:
             pool_data = json.load(f)
             for agent_name in pool_data:
@@ -116,7 +158,16 @@ class AgentPool:
                     keep_models_fixed=True, featurizer=self.agent.featurizer)
                 self.pool.append(agent)
 
-def tensorboard_plot(agent, tb, avg_score, win_percentage):
+def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
+        avg_score: float, win_percentage: float):
+    """
+    Use this function after a number of games have been played by some player
+    and you got the results of the games (avg_score, win_percentage).
+    These results will be plotted and additional data saved in the agent
+    will also be plotted, i.e. predictor stats if the agent has one
+    or valid_rate if tracked by the player (only for RLAgent).
+    """
+
     tb.scalar('1_win_percentage', win_percentage)
     tb.scalar('2_score', avg_score)
 
@@ -173,6 +224,16 @@ def tensorboard_plot(agent, tb, avg_score, win_percentage):
             agent.predictor.predictions[e][amount_cards] = []
 
 def calculate_win_percentage(scores):
+    """Given the scores for all players, calculate the win percentage for each player
+
+    Args:
+        scores (float array of dimensionality [num_games_played][num_players]):
+            For each game and player, the number of points achieved.
+
+    Returns: an np.ndarray(shape=(num_players,), dtype=float32)
+        containing the win percentage for each player
+    """
+
     scores = np.array(scores)
     player_indices, win_counts = np.unique(np.argmax(scores, axis=1), return_counts=True)
     win_percentages = np.zeros(scores.shape[1])
@@ -180,6 +241,19 @@ def calculate_win_percentage(scores):
     return win_percentages
 
 def plot_agents(tb, scores, agents, agents_to_plot):
+    """
+    Calculates the win percentages and calls plot_agent
+    for each of the agents in agents_to_plot
+
+    Args:
+        tb (TensorboardWrapper): The tensorboard where to plot the data
+        scores (float array of dimensionality [num_games_played][num_players]):
+            For each game and player, the number of points achieved.
+        agents ([Player]): All players participating in the game
+        agents_to_plot ([int]): The positions of those agents in `agents`
+            where data should be plotted
+    """
+
     agents_to_plot = [(p, agents[p], tb.view_as(agents[p])) for p in agents_to_plot]
     mean_scores = np.mean(scores, axis=0)
     win_percentages = calculate_win_percentage(scores)
@@ -189,6 +263,18 @@ def plot_agents(tb, scores, agents, agents_to_plot):
             mean_scores[agent_position], win_percentages[agent_position])
 
 def play_games(player_selector, tb, agents_to_plot, flags):
+    """Play games infinitly, plot results and yield the current game number every game
+
+    Args:
+        player_selector (function () => [Player]): Called every game to determine
+            the players in this game.
+        tb (TensorboardWrapper): The tensorboard to plot to
+        agents_to_plot ([int]): The positions of those agents in the array returned by
+            `player_selector` where data should be plotted
+        flags ({ flag_name: flag_value }): Constants used throughout the program,
+            usually things like how often stuff should be plotted / saved etc.
+    """
+
     scores = []
     for game_num in itertools.count():
         print(game_num)
@@ -205,7 +291,30 @@ def play_games(player_selector, tb, agents_to_plot, flags):
 
         yield game_num
 
+"""
+The functions below can be seen as seperate tests. All of them play some number
+of games and plot the results. The train_... functions also train some kind of agent
+and save the model once in a while while the evaluate_... functions keep the main model
+which we want to evaluate fixed (though the opponent might still be learning)
+and only plot the game results.
+
+All of the functions take at least these two arguments:
+    tb (TensorboardWrapper): The tensorboard where to plot the data
+    flags ({ flag_name: flag_value }): Constants used throughout the program,
+        usually things like how often stuff should be plotted / saved etc.
+
+The functions are called from main() quite directly based on the command line arguments.
+"""
+
 def train_with_self_play_against_newest_version(tb, flags):
+    """
+    Do self play with where all of the 3 opponents are of the same type
+    and share models / paramenters with the agent itself.
+
+    This means that the agent is getting the experience of 4 games after one game
+    but it also means that it might overfit against itself.
+    """
+
     agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
     agents = [agent, agent.clone(), agent.clone(), agent.clone()]
 
@@ -214,6 +323,13 @@ def train_with_self_play_against_newest_version(tb, flags):
             agent.save_models()
 
 def train_with_self_play_against_old_versions(tb, flags):
+    """
+    Do self play the 3 opponents are past fixed versions of the agent itself.
+    Every flags['pool_save_frequency'] steps the agent is added to the pool
+    as a cloned fixed version. The exact behaviour on how opponents are selected
+    depends on the behaviour of the AgentPool class.
+    """
+
     agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
     agent_pool = AgentPool(agent)
 
@@ -225,6 +341,8 @@ def train_with_self_play_against_old_versions(tb, flags):
             agent_pool.add_current_version()
 
 def evaluate(tb, flags, other_agents):
+    """Evaluate the TFAgentsPPOAgent against `other_agents`"""
+
     agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
     agents = [agent] + other_agents(agent)
 
@@ -232,6 +350,12 @@ def evaluate(tb, flags, other_agents):
         pass
 
 def evaluate_rule_based(tb, flags):
+    """
+    Evaluate the RuleBasedAgent against 3 AverageRandomPlayers.
+    This doesn't use the TFAgentsPPOAgent and only corresponds to the previous
+    test_rule_based_agent.py which has been removed and replaced with this shorter version.
+    """
+
     agents = [RuleBasedAgent()] + [AverageRandomPlayer(
         name='AverageRandomPlayer' + str(i)) for i in range(3)]
     for game_num in play_games(lambda: agents, tb, range(4), flags):
