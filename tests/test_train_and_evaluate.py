@@ -94,9 +94,10 @@ class AgentPool:
     and gain more experience when playing against the current version (but might overfit).
     """
 
-    def __init__(self, main_agent, path=None):
+    def __init__(self, main_agent, max_size, path=None):
         self.pool = []
         self.agent = main_agent
+        self.max_size = max_size
 
         if path is None:
             path = 'pools/MainPool'
@@ -142,6 +143,9 @@ class AgentPool:
         of it and add it to the pool for future random selection by self.select_players.
         """
 
+        if len(self.pool) >= self.max_size:
+            self.pool.pop(random.randrange(len(self.pool)))
+
         clone_name = self.agent.name + '@' + datetime.datetime.now().isoformat()
 
         clone = self.agent.clone(clone_name)
@@ -153,6 +157,7 @@ class AgentPool:
 
         clone = self.agent.__class__(name=clone_name,
             keep_models_fixed=True, featurizer=self.agent.featurizer)
+
         self.pool.append(clone)
         self.save()
 
@@ -379,7 +384,7 @@ def train_with_self_play_against_old_versions(tb, flags):
     """
 
     agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
-    agent_pool = AgentPool(agent)
+    agent_pool = AgentPool(agent, max_size=flags['max_pool_size'])
 
     for game_num in play_games(agent_pool.select_players, tb, [0], flags):
         if game_num % flags['agent_save_frequency'] == 0:
@@ -414,6 +419,7 @@ def main():
         'tensorboard_plot_frequency': 20,
         'agent_save_frequency': 50,
         'pool_save_frequency': 100,
+        'max_pool_size': 20,
     })
 
     # TODO maybe also make it possible to specify these flags as command line options
