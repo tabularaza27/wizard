@@ -236,7 +236,7 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
                 ('2_overall_predictions', 'overall'),
                 ('3_correct_predictions', 'correct_prediction'),
                 ('4_incorrect_predictions', 'incorrect_prediction')]:
-            tb.histogram('{plt_name}_{amount_cards}',
+            tb.histogram(f'{plt_name}_{amount_cards}',
                 agent.predictor.predictions[datapoint_name][amount_cards])
 
         # reset predictions variable
