@@ -445,6 +445,11 @@ if __name__ == '__main__':
     tf.compat.v1.enable_v2_behavior()
     tf.compat.v1.InteractiveSession()
 
+    device_name = tf.test.gpu_device_name()
+    if device_name != '/device:GPU:0':
+        raise SystemError('GPU device not found')
+    print('Found GPU at: {}'.format(device_name))
+
     try:
         main()
     except KeyboardInterrupt:
