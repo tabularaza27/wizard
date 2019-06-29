@@ -451,6 +451,7 @@ if __name__ == '__main__':
     print('Found GPU at: {}'.format(device_name))
 
     try:
-        main()
+        with tf.device('/device:GPU:0'):
+            main()
     except KeyboardInterrupt:
         sys.exit()
