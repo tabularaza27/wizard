@@ -422,7 +422,7 @@ def main():
         'tensorboard_plot_frequency': 20,
         'agent_save_frequency': 50,
         'pool_save_frequency': 100,
-        'max_pool_size': 20,
+        'max_pool_size': 500,
     })
 
     # TODO maybe also make it possible to specify these flags as command line options
