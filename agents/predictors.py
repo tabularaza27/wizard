@@ -85,7 +85,7 @@ class Predictor:
 
         self._build_new_model()
         self.model_path = model_path + 'model'
-        if os.path.isfile(self.model_path):
+        if os.path.exists(model_path):
             self.model.load_weights(self.model_path)
 
         # stores the predictions made by the predictor (statistics)
