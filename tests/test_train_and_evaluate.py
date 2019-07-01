@@ -12,6 +12,7 @@ import random
 import subprocess
 import itertools
 import atexit
+import psutil
 
 import numpy as np
 import tensorflow as tf
@@ -329,7 +330,9 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
 
     scores = []
     for game_num in itertools.count():
-        print(game_num)
+        process = psutil.Process(os.getpid())
+        memory_usage = int(process.memory_info().rss / 2 ** 20)
+        print(game_num, f'[memory usage: {memory_usage} MiB]')
 
         agents = player_selector()
         scores.append(play_game(agents))
