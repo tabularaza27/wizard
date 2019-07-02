@@ -12,6 +12,7 @@ import random
 import subprocess
 import itertools
 import atexit
+import psutil
 
 import numpy as np
 import tensorflow as tf
@@ -94,9 +95,10 @@ class AgentPool:
     and gain more experience when playing against the current version (but might overfit).
     """
 
-    def __init__(self, main_agent, path=None):
+    def __init__(self, main_agent, max_size, path=None):
         self.pool = []
         self.agent = main_agent
+        self.max_size = max_size
 
         if path is None:
             path = 'pools/MainPool'
@@ -142,6 +144,9 @@ class AgentPool:
         of it and add it to the pool for future random selection by self.select_players.
         """
 
+        if len(self.pool) >= self.max_size:
+            self.pool.pop(random.randrange(len(self.pool)))
+
         clone_name = self.agent.name + '@' + datetime.datetime.now().isoformat()
 
         clone = self.agent.clone(clone_name)
@@ -153,6 +158,7 @@ class AgentPool:
 
         clone = self.agent.__class__(name=clone_name,
             keep_models_fixed=True, featurizer=self.agent.featurizer)
+
         self.pool.append(clone)
         self.save()
 
@@ -236,7 +242,7 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
                 ('2_overall_predictions', 'overall'),
                 ('3_correct_predictions', 'correct_prediction'),
                 ('4_incorrect_predictions', 'incorrect_prediction')]:
-            tb.histogram('{plt_name}_{amount_cards}',
+            tb.histogram(f'{plt_name}_{amount_cards}',
                 agent.predictor.predictions[datapoint_name][amount_cards])
 
         # reset predictions variable
@@ -324,7 +330,9 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
 
     scores = []
     for game_num in itertools.count():
-        print(game_num)
+        process = psutil.Process(os.getpid())
+        memory_usage = int(process.memory_info().rss / 2 ** 20)
+        print(game_num, f'[memory usage: {memory_usage} MiB]')
 
         agents = player_selector()
         scores.append(play_game(agents))
@@ -379,7 +387,7 @@ def train_with_self_play_against_old_versions(tb, flags):
     """
 
     agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
-    agent_pool = AgentPool(agent)
+    agent_pool = AgentPool(agent, max_size=flags['max_pool_size'])
 
     for game_num in play_games(agent_pool.select_players, tb, [0], flags):
         if game_num % flags['agent_save_frequency'] == 0:
@@ -414,6 +422,7 @@ def main():
         'tensorboard_plot_frequency': 20,
         'agent_save_frequency': 50,
         'pool_save_frequency': 100,
+        'max_pool_size': 500,
     })
 
     # TODO maybe also make it possible to specify these flags as command line options
@@ -443,7 +452,6 @@ def main():
 
 if __name__ == '__main__':
     tf.compat.v1.enable_v2_behavior()
-    tf.compat.v1.InteractiveSession()
 
     device_name = tf.test.gpu_device_name()
     if device_name != '/device:GPU:0':

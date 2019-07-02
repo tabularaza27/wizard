@@ -9,6 +9,23 @@ from game_engine.card import Card
 
 logdir = '/logs'
 
+class PredictorNetwork(K.models.Model):
+    def __init__(self, x_dim, y_dim):
+        super().__init__(name='predictor_network', dynamic=False)
+
+        self.model_layers = [
+            K.layers.Dense(128, input_dim=x_dim, activation='relu'),
+            K.layers.BatchNormalization(),
+            K.layers.Dense(64, activation='relu'),
+            K.layers.BatchNormalization(),
+            K.layers.Dense(32, activation='relu'),
+            K.layers.Dense(y_dim, activation='softmax'),
+        ]
+
+    def call(self, x):
+        for layer in self.model_layers:
+            x = layer(x)
+        return x
 
 class Predictor:
     """Predictor object, predicts the number of tricks achieved in a round.
@@ -66,11 +83,10 @@ class Predictor:
         # keep track of current round, is needed for reporting purposes
         self.current_round = 0
 
-        self.model_path = model_path + 'model.h5'
-        if os.path.isfile(self.model_path):
-            self.model = K.models.load_model(self.model_path)
-        else:
-            self._build_new_model()
+        self._build_new_model()
+        self.model_path = model_path + 'model'
+        if os.path.exists(model_path):
+            self.model.load_weights(self.model_path)
 
         # stores the predictions made by the predictor (statistics)
         # 0 stores all the predictions, the other keys correspond to the number of cards
@@ -101,23 +117,15 @@ class Predictor:
                     [predicted_num_tricks] = num_points
 
     def _build_new_model(self):
-        self.model = K.Sequential([
-            K.layers.Dense(128, input_dim=self.x_dim, activation='relu'),
-            K.layers.BatchNormalization(),
-            K.layers.Dense(64, activation='relu'),
-            K.layers.BatchNormalization(),
-            K.layers.Dense(32, activation='relu'),
-            K.layers.Dense(self.y_dim, activation='softmax')
-        ])
-
+        self.model = PredictorNetwork(self.x_dim, self.y_dim)
         self.model.compile(optimizer=K.optimizers.Adam(),
                            loss='categorical_crossentropy', metrics=['accuracy'])
 
     def save_model(self, model_path=None):
         if model_path is None:
-            self.model.save(self.model_path)
+            self.model.save_weights(self.model_path)
         else:
-            self.model.save(model_path + 'model.h5')
+            self.model.save_weights(model_path + 'model')
 
     def make_prediction(self, initial_cards: List[Card],
                         trump_color_card: Card) -> Tuple[np.ndarray, int]:
