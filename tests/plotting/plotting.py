@@ -147,7 +147,7 @@ def calculate_smoothing_window_length(time_steps, smoothing_factor, smoothing_po
     `                              polyorder` must be less than `window_length`.
 
     Returns:
-
+        int: window length for the savaitzky golay filter
     """
 
     assert 0 <= smoothing_factor <= 1, 'Smoothing Factor needs to be in [0,1]'
@@ -162,7 +162,8 @@ def calculate_smoothing_window_length(time_steps, smoothing_factor, smoothing_po
 
     print(window_length, time_steps)
 
-    return  window_length
+    return window_length
+
 
 def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=False, save_plot=True, plot_title=None,
                 plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4):
@@ -210,7 +211,9 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
         if smoothing:
             # smooth data with savitzky_golay filter (https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
             # window size and polyorder can be adjusted or could be extracted as paramters
-            smoothing_window_length = calculate_smoothing_window_length(time_steps=len(y), smoothing_factor=smoothing_factor, smoothing_polyorder=smoothing_polyorder)
+            smoothing_window_length = calculate_smoothing_window_length(time_steps=len(y),
+                                                                        smoothing_factor=smoothing_factor,
+                                                                        smoothing_polyorder=smoothing_polyorder)
             smoothed_data = savgol_filter(y, window_length=smoothing_window_length, polyorder=4)
             ax.plot(x, smoothed_data, color=f'C{index}')
             labels.append(f'{agent} smoothed')
