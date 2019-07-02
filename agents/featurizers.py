@@ -198,3 +198,66 @@ class FullFeaturizer(Featurizer):
 
     def state_dimension(self):
         return 525
+
+
+class CombinedFeaturizer(Featurizer):
+
+    def transform(self, player: Player, trump: Card, first: Card, played: Dict[int, Card], players: List[Player],
+                  played_in_round: Dict[int, List[Card]], color_left_indicator: np.ndarray, first_player_index: int):
+        # cards in the hand of the player (players x 54)
+        hand_arr = self.cards_to_arr(player.hand)
+
+        trick_cards = filter(lambda card: not card is None, played.values())
+        trick_arr = self.cards_to_arr(trick_cards)
+
+        round_cards = sum(played_in_round.values(), [])
+        game_arr = self.cards_to_arr(round_cards)
+        first_color = self.color_to_bin_arr(first)
+
+        # one hot encoding of trump color (4)
+        trump_color = self.color_to_bin_arr(trump)
+
+        # how many cards of a certain color the player has left (4)
+        player_color_left = np.zeros(4)
+        for card in player.hand:
+            if card.color != "White":
+                player_color_left[Card.colors.index(card.color) - 1] += 1
+
+        # The predictions of all player (players)
+        predictions = []
+
+        # How many tricks the player already achieved (players)
+        achieved_tricks = []
+
+        # How many tricks the player still have to achieve (players)
+        tricks_needed = []
+
+        for p in players:
+            predictions.append(p.prediction)
+            tricks = p.get_state()[1]
+            achieved_tricks.append(tricks)
+            tricks_needed.append(p.prediction - tricks)
+
+        # the position of the player
+        player_position = first_player_index
+        while players[player_position] != player:
+            player_position = (player_position + 1) % len(players)
+
+        player_position_arr = K.utils.to_categorical(player_position, num_classes=len(players))
+
+        # How many tricks are left
+        tricks_left = len(player.hand)
+
+        # indicator for how aggressive the player should try to get tricks
+        playing_style = tricks_left - np.sum(np.maximum(tricks_needed, 0))
+
+        feature_arr = np.concatenate(
+            (hand_arr, trick_arr, trump_color, first_color, game_arr, player_color_left, color_left_indicator.flatten(),
+             np.array(predictions), np.array(achieved_tricks), np.array(tricks_needed), player_position_arr,
+             np.array([tricks_left, playing_style])))
+
+        return feature_arr
+
+    def state_dimension(self):
+        return 206
+

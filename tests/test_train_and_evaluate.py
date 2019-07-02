@@ -21,7 +21,7 @@ from game_engine.player import Player, AverageRandomPlayer
 from agents.rl_agent import RLAgent
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from agents.rule_based_agent import RuleBasedAgent
-from agents.featurizers import OriginalFeaturizer
+from agents.featurizers import OriginalFeaturizer, CombinedFeaturizer
 
 class TensorboardWrapper:
     def __init__(self):
@@ -368,7 +368,7 @@ def train_with_self_play_against_newest_version(tb, flags):
     but it also means that it might overfit against itself.
     """
 
-    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
+    agent = TFAgentsPPOAgent(featurizer=CombinedFeaturizer())
     agents = [agent, agent.clone(), agent.clone(), agent.clone()]
 
     for game_num in play_games(lambda: agents, tb, range(4), flags):
@@ -383,7 +383,7 @@ def train_with_self_play_against_old_versions(tb, flags):
     depends on the behaviour of the AgentPool class.
     """
 
-    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
+    agent = TFAgentsPPOAgent(featurizer=CombinedFeaturizer())
     agent_pool = AgentPool(agent, max_size=flags['max_pool_size'])
 
     for game_num in play_games(agent_pool.select_players, tb, [0], flags):
