@@ -130,24 +130,42 @@ def print_infos(data_set):
 
 ### Plotting Functionalities ###
 
-def smooth_data(data):
-    """return smoothed data set (smoothing is done with savitzky_golay filter )
+def calculate_smoothing_window_length(time_steps, smoothing_factor, smoothing_polyorder):
+    """returns the window length for savitzky golay filter
 
-    It uses least squares to regress a small window of your data onto a polynomial,
-    then uses the polynomial to estimate the point in the center of the window.
+    smoothing_window_length = smoothing_factor * time_steps
+
+    Note:
+        he length of the filter window (i.e. the number of coefficients).
+        `window_length` must be a positive odd integer. If `mode` is 'interp',
+        `window_length` must be less than or equal to the size of `x`.
 
     Args:
-        data (list): list of numbers (int, float)
+        time_steps (int): amount of time steps in the data
+        smoothing_factor (float): has to be between 0 and 1
+        smoothing_polyorder (int): The order of the polynomial used to fit the samples.
+    `                              polyorder` must be less than `window_length`.
 
-    Return
-        list: smoothed data
+    Returns:
+
     """
 
-    return
+    assert 0 <= smoothing_factor <= 1, 'Smoothing Factor needs to be in [0,1]'
 
+    window_length = int(np.floor(smoothing_factor * time_steps))
+    # polyorder needs to be less tahn window_length
+    if smoothing_polyorder >= window_length:
+        window_length = smoothing_polyorder + 1
+    # window_length needs to be an odd number
+    if window_length % 2 == 0:
+        window_length -= 1
+
+    print(window_length, time_steps)
+
+    return  window_length
 
 def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=False, save_plot=True, plot_title=None,
-                plot_name=None):
+                plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4):
     """plotting scalar metrics for tensorboard summaries and save plot to /plots
 
     Args:
@@ -159,6 +177,9 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
         save_plot (bool): If True, save plot to file
         plot_title (str): title of the plot. If None, summary_name is the title
         plot_name (str): file name when plot is saved. If None, use plot_title for naming the file
+        smoothing_factor (float): has to be in [0,1]
+        smoothing_polyorder (int): The order of the polynomial used to fit the samples.
+    `                              polyorder` must be less than `window_length`.
     """
     if not plot_title:
         plot_title = summary_name
@@ -189,7 +210,8 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
         if smoothing:
             # smooth data with savitzky_golay filter (https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
             # window size and polyorder can be adjusted or could be extracted as paramters
-            smoothed_data = savgol_filter(y, window_length=31, polyorder=4)
+            smoothing_window_length = calculate_smoothing_window_length(time_steps=len(y), smoothing_factor=smoothing_factor, smoothing_polyorder=smoothing_polyorder)
+            smoothed_data = savgol_filter(y, window_length=smoothing_window_length, polyorder=4)
             ax.plot(x, smoothed_data, color=f'C{index}')
             labels.append(f'{agent} smoothed')
 
