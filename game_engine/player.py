@@ -38,6 +38,8 @@ class Player:
         """
         playable_cards = []
         first_colors = []
+        if len(self.hand) == 0:
+            print("ERROR: Handy Empty")
         if first is None:
             return self.hand
         for card in self.hand:

@@ -18,10 +18,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.WizardGameManager.as_view(), name="start_game"),
-    path('game/', views.WizardGameManager.play_game, name="play_game"),
-    path('game/round/<int:round>/', views.play_round, name="play_round"),
-    path('game/round/<int:round>/prediction/', views.ask_prediction, name="ask_prediction"),
-    path('game/round/<int:round>/prediction/<int:prediction>/', views.get_prediction, name="get_prediction"),
-    path('game/round/<int:round>/trick/<int:trick>/', views.play_trick, name="play_trick"),
+    path('', views.home, name="start_game"),
+    path('game/', views.play_game, name="play_game"),
+    path('game/round/<int:game_round_no>/', views.play_round, name="play_round"),
+    path('game/round/<int:game_round_no>/prediction/', views.get_prediction, name="get_prediction"),
+    path('game/round/<int:game_round_no>/prediction/<int:prediction>/', views.receive_prediction, name="receive_prediction"),
+    path('game/round/<int:game_round_no>/trick/', views.get_play, name="get_play"),
+    path('game/round/<int:game_round_no>/trick/<int:trick_card>/', views.receive_play, name="receive_play"),
+    path('game/round/<int:game_round_no>/result/', views.show_result, name="show_result"),
 ]
