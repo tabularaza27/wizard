@@ -432,7 +432,7 @@ def main():
         'train_vs_old_self': (train_with_self_play_against_old_versions, []),
         'train_vs_current_self': (train_with_self_play_against_newest_version, []),
         'evaluate': (evaluate, [lambda agent:
-            [agent.clone(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
+            [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
         # TODO some other evaluate_something could also be added here
         # which uses other opponents
         # TODO we allow the rule based agent predictor to learn while evaluating against it
