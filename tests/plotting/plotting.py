@@ -1,5 +1,6 @@
 import tensorflow as tf
 import glob
+import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -61,12 +62,14 @@ def load_single_file(file_path):
     return {'scalars': scalars, 'histos': histos}
 
 
-def load_data(experiment_number, load_histos=False):
+def load_data(experiment_number, load_histos=False, log_path=None, time_range=[0, sys.maxsize]):
     """loads all data for given experiment number
 
     Args:
         experiment_number (int): number of experiment folder
         load_histos (bool): if True data for histos are also loaded
+        path (str): path where tensorboard logs are saved. If None default path is Wizard/tests/logs
+        time_range (list): time range for which data should be loaded e.g. (0, 20000)
 
     Returns:
         dict: dictionary of all data for each player
@@ -77,7 +80,12 @@ def load_data(experiment_number, load_histos=False):
     if load_histos:
         summary_types.append('histos')
 
-    log_path = '../logs/{}/*Agent*'.format(experiment_number)
+    if not log_path:
+        log_path = '../logs/{}/*Agent*'.format(experiment_number)
+    else:
+        log_path = os.path.join(log_path, '*Agent*')
+
+    print(f'files are loaded from paths {log_path}')
 
     # get file paths for each player
     player_paths = glob.glob(log_path)
@@ -103,7 +111,8 @@ def load_data(experiment_number, load_histos=False):
         # sort summaries by time step
         for summary_type in summary_types:
             for tag, value in player_data[player_name][summary_type].items():
-                player_data[player_name][summary_type][tag] = sorted(value, key=itemgetter(0))
+                time_range_filtered_value = [x for x in value if time_range[0] <= x[0] <= time_range[1]]
+                player_data[player_name][summary_type][tag] = sorted(time_range_filtered_value, key=itemgetter(0))
 
     return player_data
 
@@ -166,7 +175,7 @@ def calculate_smoothing_window_length(time_steps, smoothing_factor, smoothing_po
 
 
 def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=False, save_plot=True, plot_title=None,
-                plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4):
+                plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4, ylim=None):
     """plotting scalar metrics for tensorboard summaries and save plot to /plots
 
     Args:
@@ -181,6 +190,7 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
         smoothing_factor (float): has to be in [0,1]
         smoothing_polyorder (int): The order of the polynomial used to fit the samples.
     `                              polyorder` must be less than `window_length`.
+        ylim (tuple): lower and upper limit for y axes. e.g. (0,200)
     """
     if not plot_title:
         plot_title = summary_name
@@ -228,6 +238,9 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
 
             ax.plot(x, y, color=f'C{index}', linestyle=linestyle, alpha=opacity)
             labels.append(agent)
+
+    if ylim:
+        ax.set_ylim(ylim)
 
     ax.legend(labels)
     ax.set_title(plot_title)
