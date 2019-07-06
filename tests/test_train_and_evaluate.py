@@ -235,14 +235,14 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
             data = agent.predictor.predictions[datapoint_name][amount_cards]
             if len(data) == 0:
                 continue
-            tb.scalar(f'{plt_name}_{amount_cards}', np.mean(data))
+            tb.scalar('{}_{}'.format(plt_name, amount_cards), np.mean(data))
 
         # prediction distributions
         for plt_name, datapoint_name in [
                 ('2_overall_predictions', 'overall'),
                 ('3_correct_predictions', 'correct_prediction'),
                 ('4_incorrect_predictions', 'incorrect_prediction')]:
-            tb.histogram(f'{plt_name}_{amount_cards}',
+            tb.histogram('{}_{}'.format(plt_name, amount_cards),
                 agent.predictor.predictions[datapoint_name][amount_cards])
 
         # reset predictions variable
@@ -332,7 +332,7 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
     for game_num in itertools.count():
         process = psutil.Process(os.getpid())
         memory_usage = int(process.memory_info().rss / 2 ** 20)
-        print(game_num, f'[memory usage: {memory_usage} MiB]')
+        print(game_num, '[memory usage: {} MiB]'.format(memory_usage))
 
         agents = player_selector()
         scores.append(play_game(agents))
