@@ -4,12 +4,13 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 from operator import itemgetter
 from scipy.signal import savgol_filter
 
 ### Plot Settings ###
 
-PLOT_SIZE = (16, 9)
+PLOT_SIZE = (16, 4)
 PLOT_STYLE = 'ggplot'
 
 plt.rcParams["figure.figsize"] = PLOT_SIZE
@@ -81,9 +82,9 @@ def load_data(experiment_number, load_histos=False, log_path=None, time_range=[0
         summary_types.append('histos')
 
     if not log_path:
-        log_path = '../logs/{}/*Agent*'.format(experiment_number)
+        log_path = '../logs/{}/*A*'.format(experiment_number)
     else:
-        log_path = os.path.join(log_path, '*Agent*')
+        log_path = os.path.join(log_path, '*A*')
 
     print(f'files are loaded from paths {log_path}')
 
@@ -174,8 +175,20 @@ def calculate_smoothing_window_length(time_steps, smoothing_factor, smoothing_po
     return window_length
 
 
+def smooth(scalars, weight):  # Weight between 0 and 1
+    last = scalars[0]  # First value in the plot (first timestep)
+    smoothed = list()
+    for point in scalars:
+        smoothed_val = last * weight + (1 - weight) * point  # Calculate smoothed value
+        smoothed.append(smoothed_val)                        # Save it
+        last = smoothed_val                                  # Anchor the last smoothed value
+
+    return smoothed
+
+
+
 def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=False, save_plot=True, plot_title=None,
-                plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4, ylim=None):
+                plot_name=None, smoothing_factor=0.5, smoothing_polyorder=4, ylim=None, ylabel=None):
     """plotting scalar metrics for tensorboard summaries and save plot to /plots
 
     Args:
@@ -197,6 +210,9 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
 
     if not plot_name:
         plot_name = plot_title
+
+    if not ylabel:
+        ylabel = summary_name
 
     # agents for which data should be plotted
     if not agents:
@@ -224,8 +240,12 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
             smoothing_window_length = calculate_smoothing_window_length(time_steps=len(y),
                                                                         smoothing_factor=smoothing_factor,
                                                                         smoothing_polyorder=smoothing_polyorder)
-            smoothed_data = savgol_filter(y, window_length=smoothing_window_length, polyorder=4)
-            ax.plot(x, smoothed_data, color=f'C{index}')
+            # smoothed_data = savgol_filter(y, window_length=smoothing_window_length, polyorder=3)
+            smoothed_data = smooth(y, weight=smoothing_factor)
+            ax.set_xlabel('games', labelpad=5)
+            ax.set_ylabel(ylabel)
+            ax.plot(x, smoothed_data, linewidth=3.5, color=f'C{index}')
+            ax.tick_params(axis='both', labelsize=15)
             labels.append(f'{agent} smoothed')
 
         if plot_original:
@@ -242,11 +262,14 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
     if ylim:
         ax.set_ylim(ylim)
 
-    ax.legend(labels)
-    ax.set_title(plot_title)
-    plt.show()
+    ax.legend(labels,loc=4, prop={'size':15})
+    # ax.set_title(plot_title)
+    # tikzplotlib.save(f'plots/{plot_name}.tikz')
+    # plt.show()
 
     if save_plot:
         if not os.path.exists('plots'):
             os.makedirs('plots')
-        fig.savefig(f'plots/{plot_name}.png', transparent=False, dpi=300)
+
+        plt.draw()
+        fig.savefig(f'plots/{plot_name}.svg', bbox_inches='tight')
