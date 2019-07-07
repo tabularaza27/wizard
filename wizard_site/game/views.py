@@ -1,0 +1,235 @@
+from django.shortcuts import render, redirect
+import sys
+sys.path.append('../')
+from game_engine.card import Card
+from game_engine.trick import Trick
+from agents.rule_based_agent import RuleBasedAgent
+from game_engine.round import Round
+from game_engine.player import Player
+# from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
+
+
+class TrickManager(Trick):
+
+    def __init__(self, trump_card, players, first_player, played_cards_in_round):
+        super().__init__(trump_card, players, first_player, played_cards_in_round)
+        self.current_winner = self.first_player
+        self.old_card = Card("White", 0)
+        self.new_card = Card("White", 0)
+        self.trick_cards = []
+        self.first_card = Card("White", 0)
+
+
+# class HumanPlayer(Player):
+#
+#     def __init__(self, request=None):
+#         super().__init__()
+#         self.request = request
+#
+#     def play_card(self, trump, first, played_in_round, players, played_in_game):
+#         pass
+#
+#     def get_prediction(self, trump, num_players):
+#         pass
+#
+#     def get_trump_color(self):
+#         pass
+
+
+players = [RuleBasedAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
+game_round = Round(round_num=1, players=players)
+trick = TrickManager(Card('White', 0), None, 0, [None])
+# left_player = RuleBasedAgent()
+# top_player = RuleBasedAgent()
+# right_player = RuleBasedAgent()
+# human_player = Player()
+blind = False
+
+
+def home(request):
+    return render(request, 'start.html')
+
+
+def play_game(request):
+    for player in players:
+        if player.__class__.__name__ == "TFAgentsPPOAgent":
+            player.__init__(keep_models_fixed=True)
+            player.load_models
+        player.__init__()
+    return redirect('play_round', game_round_no=1)
+
+
+def play_round(request, game_round_no):
+    game_round.__init__(round_num=game_round_no, players=players)
+    for player in players:
+        player.wins = 0
+        player.prediction = -1
+    return redirect('get_prediction', game_round_no=game_round_no)
+
+
+def get_prediction(request, game_round_no):
+    for player in players:
+        player.hand = game_round.deck.draw(game_round_no)
+    if game_round.deck.is_empty():
+        game_round.trump_card = Card("White", 0)
+    else:
+        game_round.trump_card = game_round.deck.draw()[0]
+        if game_round.trump_card.value == 14:
+            if game_round.first_player != 3:
+                game_round.trump_card.color = players[game_round.first_player].get_trump_color()
+            else:
+                #TODO integrate the user choosing the trump color
+                game_round.trump_card.color = players[3].hand[0].color
+        else:
+            game_round.played_cards.append(game_round.trump_card)
+    return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
+                                         'right_agent': players[2], 'human_player': players[3],
+                                         'prediction_phase': True, 'round': game_round_no, 'width': game_round_no*66,
+                                         'height': game_round_no*50, 'trump_card': game_round.trump_card,
+                                         'prediction_range': range(0, game_round_no+1), 'blind': blind})
+
+
+def receive_prediction(request, game_round_no, prediction):
+    for player in players:
+        if player.__class__.__name__ != "Player":
+            player.prediction = int(player.get_prediction(game_round.trump_card, len(players)))
+        else:
+            player.prediction = prediction
+    return redirect('get_play', game_round_no=game_round_no)
+
+
+def get_play(request, game_round_no):
+    last_winner = trick.current_winner
+    trick.__init__(game_round.trump_card, players, last_winner, game_round.played_cards)
+    # print(trick.first_player)
+    player_index = trick.first_player
+    while player_index != 3:
+        if player_index == game_round.first_player: # First player
+            trick.first_card = (players[player_index].play_card(game_round.trump_card, None, trick.trick_cards, players, game_round.played_cards))
+            trick.old_card = trick.first_card
+            game_round.played_cards.append(trick.old_card)
+            trick.trick_cards.append(trick.old_card)
+        else:
+            trick.new_card = (players[player_index].play_card(game_round.trump_card, None, trick.trick_cards, players, game_round.played_cards))
+            trick.trick_cards.append(trick.new_card)
+            if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
+                trick.current_winner = player_index
+                trick.old_card = trick.new_card
+            game_round.played_cards.append(trick.old_card)
+        player_index = (player_index + 1) % len(players)
+    return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
+                                         'right_agent': players[2], 'human_player': players[3],
+                                         'prediction_phase': False, 'round': game_round_no, 'width': game_round_no*66,
+                                         'height': game_round_no*50, 'trump_card': game_round.trump_card,
+                                         'trick_cards': trick.trick_cards, 'blind': blind})
+
+
+def receive_play(request, game_round_no, trick_card):
+    player_index = 3
+    player_card = Card.int_to_card(trick_card)
+    valid = False
+    for card in players[player_index].get_playable_cards(trick.first_card):
+        if player_card.__str__() == card.__str__():
+            valid = True
+            break
+    if not valid:
+        print("Incorrect Action")
+        print(players[player_index].get_playable_cards(trick.first_card))
+        return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
+                                      'right_agent': players[2], 'human_player': players[3],
+                                      'prediction_phase': False, 'round': game_round_no, 'width': game_round_no * 66,
+                                      'height': game_round_no * 50, 'trump_card': game_round.trump_card,
+                                      'trick_cards': trick.trick_cards, 'blind': blind})
+    trick.new_card = player_card
+    trick.trick_cards.append(trick.new_card)
+    if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
+        trick.current_winner = player_index
+        trick.old_card = trick.new_card
+    card_index = 0
+    for card in players[player_index].hand:
+        if card.__str__() == trick.new_card.__str__():
+            break
+        else:
+            card_index += 1
+    players[player_index].hand.pop(card_index)
+    game_round.played_cards.append(trick.old_card)
+    player_index = 0
+    # print(trick.first_player)
+    while player_index % len(players) != trick.first_player:
+        # print(players[player_index].hand)
+        trick.new_card = (players[player_index].play_card(game_round.trump_card, trick.first_card, trick.trick_cards, players,
+                                                          game_round.played_cards))
+        trick.trick_cards.append(trick.new_card)
+        if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
+            trick.current_winner = player_index
+            trick.old_card = trick.new_card
+        game_round.played_cards.append(trick.old_card)
+        player_index += 1
+    players[trick.current_winner].wins += 1
+    return redirect('show_result', game_round_no)
+
+
+def show_result(request, game_round_no):
+    if len(players[0].hand) == 0:
+        for player in players:
+            if player.prediction == player.wins:
+                player.score += player.prediction*10 + 20
+            else:
+                player.score -= abs(player.prediction - player.wins)*10
+        next = 'round'
+    else:
+        game_round.first_player = (game_round.first_player + 1) % len(players)
+        next = 'trick'
+    return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
+                                         'right_agent': players[2], 'human_player': players[3],
+                                         'prediction_phase': False, 'round': game_round_no, 'width': game_round_no * 66,
+                                         'height': game_round_no * 50, 'trump_card': game_round.trump_card,
+                                         'trick_cards': trick.trick_cards, 'blind': blind,
+                                         'winner': trick.current_winner, 'next': next, 'nr': game_round_no + 1})
+
+# def convert_pack_to_values(cards):
+#     result = []
+#     for card in cards:
+#         result.append(convert_card_to_value(card.color, card.value))
+#     return result
+#
+#
+# def convert_pack_to_cards(values):
+#     result = []
+#     for value in values:
+#         result.append(convert_value_to_card(value))
+#     return result
+#
+#
+# def convert_card_to_value(color, value):
+#     if color == "Red":
+#         return value
+#     elif color == "Green":
+#         return 1 * 13 + value
+#     elif color == "Blue":
+#         return 2 * 13 + value
+#     elif color == "Yellow":
+#         return 3 * 13 + value
+#     elif color == "White":
+#         if value == 0:
+#             return 53
+#         else:
+#             return 54
+#     else:
+#         return ValueError
+#
+#
+# def convert_value_to_card(value):
+#     if value == 54:
+#         return Card(color="White", value=14)
+#     elif value == 53:
+#         return Card(color="White", value=0)
+#     else:
+#         if value > 39:
+#             return Card(color="Yellow", value=(value - (13*3)))
+#         elif value > 26:
+#             return Card(color="Blue", value=(value - (13 * 2)))
+#         elif value > 13:
+#             return Card(color="Green", value=(value - (13 * 1)))
+#         else:
+#             return Card(color="Red", value=value)

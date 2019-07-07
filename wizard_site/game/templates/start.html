@@ -1,0 +1,42 @@
+{% extends 'main.html'%}
+{% load staticfiles %}
+{% block head %}
+
+<style>
+    .start_button {
+        margin-left:auto;
+        margin-right: auto;
+        margin-top: -30px;
+        width: 120px;
+        border: 4px solid grey;
+        padding: 20px;
+        font-size:20px;
+        text-align: center;
+        font-family: Arial;
+        color: grey;
+        cursor: pointer;
+    }
+
+    .start_button:hover {
+        color: #333333;
+        border: 4px solid #333333;
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('.start_button').click(function() {
+            window.location.href="/game/"
+        });
+    });
+</script>
+
+{% endblock %}
+
+{% block content %}
+<div style="margin-top: 50vh;">
+    <div class="start_button">
+        Start
+    </div>
+</div>
+{% endblock %}

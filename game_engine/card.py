@@ -27,6 +27,7 @@ class Card(object):
             raise ValueError
         self.color = color
         self.value = value
+        self.int = self.__int__()
 
     def __str__(self):
         return "{} {}".format(self.color, self.value)
@@ -46,13 +47,13 @@ class Card(object):
         # The rest is between 0-51 inclusive.
         return (Card.colors.index(self.color)-1)*13 + (self.value - 1)
 
-    # @staticmethod
-    # def int_to_card(x):
-    #     if x == 52:
-    #         return Card("White", 0)
-    #     elif x == 53:
-    #         return Card("White", 14)
-    #     else:
-    #         color = Card.colors[x//13 + 1]
-    #         value = x % 13 + 1
-    #         return Card(color, value)
+    @staticmethod
+    def int_to_card(x):
+        if x == 52:
+            return Card("White", 0)
+        elif x == 53:
+            return Card("White", 14)
+        else:
+            color = Card.colors[x//13 + 1]
+            value = x % 13 + 1
+            return Card(color, value)
