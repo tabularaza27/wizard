@@ -13,6 +13,13 @@ from scipy.signal import savgol_filter
 PLOT_SIZE = (16, 4)
 PLOT_STYLE = 'ggplot'
 
+LEGEND = {
+    'TFAgentsPPOAgent': {'name': 'RL Agent', 'color': '#38739B'},
+    'RuleBasedAgent': {'name':'Rule based play & prediction', 'color': 'C0'},
+    'AverageRandomPlayer': {'name': 'Random play & avg. prediction', 'color': 'C2'},
+    'RuleBasedAgentPredictor': {'name': 'Rule based play & NN prediction', 'color': 'C3'}
+}
+
 plt.rcParams["figure.figsize"] = PLOT_SIZE
 plt.style.use(PLOT_STYLE)
 
@@ -214,7 +221,7 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
     if not ylabel:
         ylabel = summary_name
 
-    # agents for which data should be plotted
+        # agents for which data should be plotted
     if not agents:
         agents = data.keys()
     else:
@@ -244,9 +251,10 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
             smoothed_data = smooth(y, weight=smoothing_factor)
             ax.set_xlabel('games', labelpad=5)
             ax.set_ylabel(ylabel)
-            ax.plot(x, smoothed_data, linewidth=3.5, color=f'C{index}')
+            # ax.plot(x, smoothed_data, linewidth=3.5, color=f'C{index}')
+            ax.plot(x, smoothed_data, linewidth=3.5, color=LEGEND[agent]["color"])
             ax.tick_params(axis='both', labelsize=15)
-            labels.append(f'{agent} smoothed')
+            labels.append(f'{LEGEND[agent]["name"]} (smoothed)')
 
         if plot_original:
             if smoothing:
@@ -256,13 +264,14 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
                 linestyle = '-'
                 opacity = 1
 
-            ax.plot(x, y, color=f'C{index}', linestyle=linestyle, alpha=opacity)
-            labels.append(agent)
+            ax.plot(x, y, color=LEGEND[agent]["color"], linestyle=linestyle, alpha=opacity)
+            labels.append(LEGEND[agent]["name"])
 
     if ylim:
         ax.set_ylim(ylim)
 
     ax.legend(labels,loc=4, prop={'size':15})
+
     # ax.set_title(plot_title)
     # tikzplotlib.save(f'plots/{plot_name}.tikz')
     # plt.show()
