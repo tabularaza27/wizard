@@ -95,11 +95,11 @@ class RLAgent(AverageRandomPlayer):
 
         Returns: The card the model will play (removed from hand)
         """
-        raise  # Has to be implemented by child
+        raise NotImplementedError  # Has to be implemented by child
 
     def observe(self, reward: float, terminal: bool):
         """Feeds the reward to the model & resets stuff if terminal is True"""
-        raise  # Has to be implemented by child
+        raise NotImplementedError  # Has to be implemented by child
 
     def _valid_action_mask(self, first):
         playable_cards = self.get_playable_cards(first)

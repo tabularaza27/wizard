@@ -26,4 +26,5 @@ urlpatterns = [
     path('game/round/<int:game_round_no>/trick/', views.get_play, name="get_play"),
     path('game/round/<int:game_round_no>/trick/<int:trick_card>/', views.receive_play, name="receive_play"),
     path('game/round/<int:game_round_no>/result/', views.show_result, name="show_result"),
+    path('game/end/', views.end, name="end")
 ]

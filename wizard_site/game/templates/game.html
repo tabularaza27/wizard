@@ -112,7 +112,7 @@
     .side_cards_right {
         position:absolute;
         display: inline-block;
-        bottom: 140px;
+        bottom: 150px;
         right: 35px;
         width:100px;
         background-color: transparent;
@@ -121,15 +121,16 @@
     .card {
         display: inline-block;
         {% if round > 10 %}
-        margin:-8px;
+        margin:2px;
+        width:40px;
         {% else %}
         margin:2px;
+        width:50px;
         {% endif %}
         font-family: Arial;
         color: red;
         border-radius: 3px;
         border: 2px solid red;
-        width:50px;
         height:50px;
         text-align: center;
         padding-top: 30px;
@@ -138,18 +139,20 @@
     .horizontal_card {
         display: inline-block;
         {% if round > 10 %}
-        margin:-8px;
+        margin:2px;
+        height:18px;
+        padding-top:4px;
         {% else %}
         margin:2px;
+        height:30px;
+        padding-top:10px;
         {% endif %}
         font-family: Arial;
         color: red;
         border-radius: 3px;
         border: 2px solid red;
         width:80px;
-        height:30px;
         text-align: center;
-        padding-top:10px;
         background-color:white;
     }
 
@@ -165,11 +168,11 @@
     }
 
     .next_button {
-        padding: 5px;
+        padding: 8px;
         border: 1px solid #999;
         width: 100px;
         height:30px;
-        font-size: 18px;
+        font-size: 16px;
         text-align: center;
         color: #666;
         border-radius: 3px;
@@ -233,16 +236,22 @@
 
 {% block content %}
 <div class="header">
-    <div style="height:50px; width:50px; float:right; margin-right:10px;">
-        <img src="{% static 'img/wizard_hat.svg' %}" style="width:30px; margin:10px;">
+    <div style="height:50px; display: inline-block; width:50px; float:right; margin-right:10px;">
+        <a href="/">
+            <img src="{% static 'img/wizard_hat.svg' %}" style="width:30px; margin:10px;">
+        </a>
     </div>
-    <div style="width:100px; margin:auto; margin-top:20px; font-family: Arial; font-weight: bold; color:#333; text-align: center;">
+    <div style="height:50px; display: inline-block; width:50px; float:right; margin-right:10px;">
+        <p style="font-family: Arial; margin-right:100px; color:#666">Wizard</p>
+    </div>
+    <div style="width:100px; margin:auto; margin-top:16px; font-family: Arial; color:#666; font-size: 20px; text-align: center;">
         Round {{round}}
     </div>
     {% if prediction_phase == False %}
-        <div style="float:left; color:#666; margin-left:10px; margin-top: -20px; width:100px; font-size: 12px; font-family: Arial; display: inline-block;">
+        <div style="float:left; color:#666; margin-left:10px; margin-top: -30px; width:120px; font-size: 12px; font-family: Arial; display: inline-block;">
             Trump Color:
-            <div style="width:20px; height:20px; border-radius:50%; float:right; margin-top: -4px; background-color: {{trump_card.color}}; ">
+            <p style="color: {{trump_card.color}}; margin-top:1px; font-size: 20px;">{{trump_card.color}}</p>
+            <!--<div style="width:20px; height:20px; border-radius:50%; float:right; margin-top: -4px; background-color: {{trump_card.color}}; ">-->
         </div>
         </div>
 
@@ -250,7 +259,8 @@
 </div>
 <div class="battleground">
     {% if prediction_phase == True %}
-        <p style="font-size: 24px; margin-top: -30px;">Prediction Phase</p>
+        <p style="font-size: 24px; margin-top: -40px;">Prediction Phase</p>
+        <p>Player {{first_player}} Starts</p>
         <p>Trump Card:</p>
         <div style="margin: 10px;">
             {% if trump_card.color == "White" %}
@@ -277,7 +287,8 @@
         </div>
     {% else %}
         {% if next %}
-            <p style="font-size: 24px; margin-top: -30px;">Results</p>
+            <p style="font-size: 24px; margin-top: -40px;">Results</p>
+            <p>Player {{winner}} wins</p>
         {% else %}
             <p style="font-size: 24px; margin-top: -30px;">Play Phase</p>
         {% endif %}
@@ -305,6 +316,7 @@
 </div>
 <div class="left_player">
     <div>
+        <p style="margin-left:40px; margin-bottom:-23px; font-family: Arial; color:#333; font-size:10px;">Player 1</p>
         <img src="{% static 'img/robot.svg' %}" style="width:60px; margin:30px;">
         <div class="score_label">
             Score:
@@ -357,6 +369,7 @@
 </div>
 <div class="right_player">
     <div style="position: absolute; bottom: 40px; right:45px;">
+        <p style="margin-left:40px; margin-bottom:-23px; font-family: Arial; color:#333; font-size:10px;">Player 3</p>
         <img src="{% static 'img/robot.svg' %}" style="width:60px; margin:30px;">
         <div class="score_label">
             Score:
@@ -409,6 +422,7 @@
 </div>
 <div class="top_player">
     <div style="position: absolute; bottom: 40px; right:45px;">
+        <p style="margin-left:40px; margin-bottom:-23px; font-family: Arial; color:#333; font-size:10px;">Player 2</p>
         <img src="{% static 'img/robot.svg' %}" style="width:60px; margin:30px;">
         <div class="score_label">
             Score:
@@ -460,6 +474,7 @@
     </div>
 </div>
 <div class="bottom_player">
+    <p style="margin-left:40px; margin-bottom:-23px; font-family: Arial; color:#333; font-size:10px;">Player 4</p>
     <div>
         <img src="{% static 'img/player_icon.svg' %}" style="width:60px; margin:30px;">
         <div class="score_label">

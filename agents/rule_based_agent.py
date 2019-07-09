@@ -122,11 +122,12 @@ class RuleBasedAgent(player.Player):
         :return: best_card
         """
         played = list(filter(lambda card: not card is None, played.values()))
-        played_in_game = sum(played_in_game.values(), [])
+        played_in_game = played_in_game.values()  # sum(played_in_game.values(), [])
 
         win_desirability = self.win_desirability(players)
         best_card = self.get_playable_cards(first)[0]
-        best_delta = abs(win_desirability - self.win_probability(played, best_card, trump, first, players, played_in_game))
+        best_delta = abs(win_desirability - self.win_probability(played, best_card, trump, first, players,
+                                                                 played_in_game))
         best_win_likelihood = 0
         round_winning_cards = []
         # calculates the win probability for every playable card
