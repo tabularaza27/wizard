@@ -7,6 +7,7 @@ from agents.rule_based_agent import RuleBasedAgent
 from game_engine.round import Round
 from game_engine.player import Player
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
+from agents.featurizers import OriginalFeaturizer
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
 
@@ -22,7 +23,7 @@ class TrickManager(Trick):
         self.first_card = Card("White", 0)
 
 
-players = [TFAgentsPPOAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
+players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()), RuleBasedAgent(), RuleBasedAgent(), Player()]
 game_round = Round(round_num=1, players=players)
 trick = TrickManager(Card('White', 0), None, 0, [None])
 blind = False
