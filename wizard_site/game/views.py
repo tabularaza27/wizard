@@ -63,6 +63,9 @@ def play_round(request, game_round_no):
     for player in players:
         player.wins = 0
         player.prediction = -1
+    game_round.played_cards = dict()
+    for index, player in enumerate(game_round.players):
+        game_round.played_cards[index] = []
     return redirect('get_prediction', game_round_no=game_round_no)
 
 
@@ -83,8 +86,8 @@ def get_prediction(request, game_round_no):
                 print("User choosing suit")
                 #TODO integrate the user choosing the trump color
                 game_round.trump_card.color = players[3].hand[0].color
-        else:
-            game_round.played_cards.update({5: game_round.trump_card})
+        # else:
+            # game_round.played_cards.update({5: game_round.trump_card})
     for player in players:
         print(str(player.hand))
     if game_round_no > 10:
@@ -125,7 +128,7 @@ def get_play(request, game_round_no):
             trick.first_card = (players[player_index].play_card(game_round.trump_card, None, trick.trick_cards, players,
                                                                 game_round.played_cards, game_round.first_player))
             trick.old_card = trick.first_card
-            game_round.played_cards.update({player_index: trick.old_card})
+            game_round.played_cards[player_index].append(trick.old_card)
             trick.trick_cards.update({player_index: trick.old_card})
         else:
             print(players[player_index].get_playable_cards(trick.first_card))
@@ -135,7 +138,7 @@ def get_play(request, game_round_no):
             if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
                 trick.current_winner = player_index
                 trick.old_card = trick.new_card
-            game_round.played_cards.update({player_index: trick.old_card})
+            game_round.played_cards[player_index].append(trick.old_card)
         player_index = (player_index + 1) % len(players)
         print("Current Winner: " + str(trick.current_winner))
     if game_round_no > 10:
@@ -180,7 +183,7 @@ def receive_play(request, game_round_no, trick_card):
     if trick.first_player == 3:
         trick.first_card = player_card
     trick.new_card = player_card
-    trick.trick_cards.update({player_index: trick.new_card})
+    game_round.played_cards[player_index].append(trick.old_card)
     if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
         trick.current_winner = player_index
         trick.old_card = trick.new_card
@@ -204,7 +207,7 @@ def receive_play(request, game_round_no, trick_card):
         if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
             trick.current_winner = player_index
             trick.old_card = trick.new_card
-        game_round.played_cards.update({player_index: trick.old_card})
+        game_round.played_cards[player_index].append(trick.old_card)
         player_index += 1
     print("Winning Player: " + str(trick.current_winner))
     players[trick.current_winner].wins += 1
