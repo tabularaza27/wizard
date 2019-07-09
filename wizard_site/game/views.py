@@ -37,8 +37,9 @@ def home(request):
 def play_game(request):
     for player in players:
         if player.__class__.__name__ == "TFAgentsPPOAgent":
-            player.__init__(keep_models_fixed=True)
-        player.__init__()
+            player.__init__(keep_models_fixed=True, featurizer=OriginalFeaturizer())
+        else:
+            player.__init__()
     return redirect('play_round', game_round_no=1)
 
 
