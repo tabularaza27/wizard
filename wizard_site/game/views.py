@@ -122,7 +122,7 @@ def get_play(request, game_round_no):
             trick.trick_cards[player_index] = trick.old_card
         else:
             print(players[player_index].get_playable_cards(trick.first_card))
-            trick.new_card = (players[player_index].play_card(game_round.trump_card, None, trick.trick_cards, players,
+            trick.new_card = (players[player_index].play_card(game_round.trump_card, trick.first_card, trick.trick_cards, players,
                                                               game_round.played_cards, game_round.first_player))
             trick.trick_cards[player_index] = trick.new_card
             if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
