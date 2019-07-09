@@ -177,6 +177,11 @@
         color: #666;
         border-radius: 3px;
     }
+    
+    .Yellow {
+        color: #CCCC00 !important;
+        border: 2px solid #CCCC00 !important;
+    }
 
     @media only screen and (max-width: 800px)  {
         .left_player {
@@ -268,7 +273,7 @@
                 {{trump_card.value}}
             </div>
             {% else %}
-            <div class="card" style="color: {{trump_card.color}}; border: 2px solid {{trump_card.color}};">
+            <div class="card {{card.color}}" style="color: {{trump_card.color}}; border: 2px solid {{trump_card.color}};">
                 {{trump_card.value}}
             </div>
             {% endif %}
@@ -294,7 +299,7 @@
         {% endif %}
         {% for card in trick_cards %}
             {% if card.color != "White" %}
-                <div class="card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                <div class="card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                     {{card.value}}
                 </div>
             {% else %}
@@ -350,7 +355,7 @@
                     <div class="horizontal_card" style="background-color: #666; border:none;">
                     </div>
                 {% else %}
-                    <div class="horizontal_card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                    <div class="horizontal_card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                         {{card.value}}
                     </div>
                 {% endif %}
@@ -403,7 +408,7 @@
                     <div class="horizontal_card" style="background-color: #666; border:none;">
                     </div>
                 {% else %}
-                    <div class="horizontal_card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                    <div class="horizontal_card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                     {{card.value}}
                 </div>
                 {% endif %}
@@ -456,7 +461,7 @@
                     <div class="card" style="background-color: #666; border:none;">
                     </div>
                 {% else %}
-                    <div class="card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                    <div class="card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                         {{card.value}}
                     </div>
                 {% endif %}
@@ -465,7 +470,7 @@
                     <div class="card" style="background-color: #666; border:none;">
                     </div>
                 {% else %}
-                    <div class="card" style="color: black; border: 2px solid black;">
+                    <div class="card {{card.color}}" style="color: black; border: 2px solid black;">
                         {{card.value}}
                     </div>
                 {% endif %}
@@ -507,12 +512,12 @@
             {% if card.color != "White" %}
                 {% if prediction_phase == False %}
                     <a href="/game/round/{{round}}/trick/{{card.int}}/">
-                        <div class="card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                        <div class="card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                             {{card.value}}
                         </div>
                     </a>
                 {% else %}
-                     <div class="card" style="color: {{card.color}}; border: 2px solid {{card.color}};">
+                     <div class="card {{card.color}}" style="color: {{card.color}}; border: 2px solid {{card.color}};">
                         {{card.value}}
                     </div>
                 {% endif %}
