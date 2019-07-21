@@ -1,7 +1,7 @@
 import random
 import numpy as np
-from keras.models import Model, model_from_json
-from keras.layers import Dense, Input
+from tensorflow.keras.models import Model, model_from_json
+from tensorflow.keras.layers import Dense, Input
 
 from game_engine.card import Card
 

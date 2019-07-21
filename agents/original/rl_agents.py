@@ -3,39 +3,64 @@ import numpy as np
 from agents import predictors, featurizers
 from agents.original import estimators, policies
 from game_engine import player
+import os
+
+MODELS_PATH = 'models/'
 
 
 class OriginalRLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
-    def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None):
+    def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None, name=None, keep_models_fixed=False):
         super().__init__()
+
+        self.keep_models_fixed = keep_models_fixed
+
         if estimator is None:
             self.estimator = estimators.DQNEstimator()
         else:
             self.estimator = estimator
 
         if policy is None:
-            self.policy = policies.EGreedyPolicy(self.estimator, epsilon=0.1)
+            if keep_models_fixed:
+                self.policy = policies.EGreedyPolicy(self.estimator, epsilon=0)
+            else:
+                self.policy = policies.EGreedyPolicy(self.estimator, epsilon=0.1)
         else:
             self.policy = policy
 
         if featurizer is None:
             self.featurizer = featurizers.OriginalFeaturizer()
         else:
+            # remove when support for different featurizers
+            if type(featurizer) is not featurizers.OriginalFeaturizer:
+                raise Exception("No other featurizer than OriginalFeaturizer currently supported by OriginalRLAgent")
             self.featurizer = featurizer
 
+        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+
         if predictor is None:
-            self.predictor = predictors.Predictor()
+            self.predictor = predictors.Predictor(model_path=self.predictor_model_path, keep_models_fixed=keep_models_fixed)
         else:
             self.predictor = predictor
+
+        if name is not None:
+            self.name = name
+        else:
+            self.name = self.__class__.__name__
 
         self.old_state = None
         self.old_score = 0
         self.old_action = None
 
+        self.clone_counter = 0
 
-    def play_card(self, trump, first, played, players, played_in_game, first_player_index):
+        agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
+        if  os.path.exists(agent_path):
+            self.load_estimator(os.path.join(agent_path, 'model'))
+
+
+    def play_card(self, trump, first, played, players, played_in_round, first_player_index):
         """Plays a card according to the estimator Q function and learns
         on-line.
         Relies on scores being updated by the environment to calculate reward.
@@ -45,7 +70,7 @@ class OriginalRLAgent(player.AverageRandomPlayer):
             played: (list(Card)) list of cards played in Trick, may be empty.
             players: (list(Player)) list of players in the game, including this
             player.
-            played_in_game: (list(Card)) list of cards played so far in the
+            played_in_round: (list(Card)) list of cards played so far in the
             game, may be empty.
             first_player_index: Index of the first player in the trick
 
@@ -53,8 +78,8 @@ class OriginalRLAgent(player.AverageRandomPlayer):
             card_to_play: (Card) the card object that the player
              decided to play.
         """
-        state = self.featurizer.transform(self, trump, first, played, players,
-                                          played_in_game, None)
+        state = self.featurizer.transform(self, trump, first, played, players, played_in_round,
+                                          None, first_player_index)
         terminal = False
         if self.old_state is not None and self.old_action is not None:
             r = self.reward
@@ -62,9 +87,12 @@ class OriginalRLAgent(player.AverageRandomPlayer):
                 terminal = True
                 # If we got a reward, it's a terminal state.
                 # We signal this with an s_prime == None
-                self.estimator.update(self.old_state, self.old_action, r, None)
+
+                if not self.keep_models_fixed:
+                    self.estimator.update(self.old_state, self.old_action, r, None)
             else:
-                self.estimator.update(self.old_state, self.old_action, r, state)
+                if not self.keep_models_fixed:
+                    self.estimator.update(self.old_state, self.old_action, r, state)
 
         probs = self.policy.get_probabilities(state)
         a = np.random.choice(len(probs), p=probs)
@@ -81,6 +109,24 @@ class OriginalRLAgent(player.AverageRandomPlayer):
 
     def load_estimator(self, name="default"):
         self.estimator.load(name)
+
+    def save_models(self, path=None):
+        if self.keep_models_fixed:
+            return
+
+        if path is None:
+            path = self.predictor_model_path
+        else:
+            path = os.path.join(path, 'Predictor/')
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.predictor.save_model(path)
+
+        agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
+        if not os.path.exists(agent_path):
+            os.makedirs(agent_path)
+        self.save_estimator(os.path.join(agent_path, 'model'))
 
     def _remove_card_played(self, a):
         """
@@ -120,3 +166,11 @@ class OriginalRLAgent(player.AverageRandomPlayer):
     def announce_result(self, num_tricks_achieved, reward):
         super().announce_result(num_tricks_achieved, reward)
         self.predictor.add_game_result(self.prediction_x, num_tricks_achieved)
+
+    def clone(self, name=None):
+        """Return a clone of this agent with networks & predictor shared"""
+
+        if name is None:
+            self.clone_counter += 1
+            name = self.name + 'Clone' + str(self.clone_counter)
+        return OriginalRLAgent(name=name, estimator=self.estimator, featurizer=self.featurizer)

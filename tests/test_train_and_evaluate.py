@@ -23,6 +23,7 @@ from agents.rl_agent import RLAgent
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from agents.rule_based_agent import RuleBasedAgent
 from agents.featurizers import OriginalFeaturizer
+from agents.original.rl_agents import OriginalRLAgent
 
 class TensorboardWrapper:
     def __init__(self):
@@ -396,6 +397,17 @@ def train_with_self_play_against_old_versions(tb, flags):
         if game_num % flags['pool_save_frequency'] == 0:
             agent_pool.add_current_version()
 
+def train_original_agent(tb, flags):
+    agent = OriginalRLAgent()
+    agents = [agent]
+    for i in range(3):
+        agents.append(agent.clone())
+
+    for game_num in play_games(lambda: agents, tb, range(4), flags):
+        if game_num % flags['agent_save_frequency'] == 0:
+            agent.save_models()
+
+
 def evaluate(tb, flags, other_agents):
     """Evaluate the TFAgentsPPOAgent against `other_agents`"""
 
@@ -431,6 +443,7 @@ def main():
     subcmds = ({
         'train_vs_old_self': (train_with_self_play_against_old_versions, []),
         'train_vs_current_self': (train_with_self_play_against_newest_version, []),
+        'train_original': (train_original_agent, []),
         'evaluate': (evaluate, [lambda agent:
             [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
         # TODO some other evaluate_something could also be added here
@@ -439,7 +452,8 @@ def main():
         # maybe it should learn stuff before and then be fixed ?
         # But on the other hand if we can, while we are fixed, beat an agent which is still
         # learning against us, that's also not bad
-        'evaluate_rule_based': (evaluate_rule_based, [])
+        'evaluate_rule_based': (evaluate_rule_based, []),
+        'evaluate_original': (evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
     })
 
     if len(sys.argv) > 1:
