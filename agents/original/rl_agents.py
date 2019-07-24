@@ -1,3 +1,6 @@
+"""Adaption of DQN RL Agent from Github Repository (https://github.com/mvelax/wizard-python). Is used for evaluating
+our agent """
+
 import numpy as np
 
 from agents import featurizers
