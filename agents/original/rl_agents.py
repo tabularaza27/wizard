@@ -1,7 +1,9 @@
 import numpy as np
 
-from agents import predictors, featurizers
+from agents import featurizers
 from agents.original import estimators, policies
+from agents.predictors import NNPredictor
+from agents.predictors import RuleBasedPredictor
 from game_engine import player
 import os
 
@@ -11,8 +13,30 @@ MODELS_PATH = 'models/'
 class OriginalRLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
-    def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None, name=None, keep_models_fixed=False):
+    def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None, name=None,
+                 keep_models_fixed=False):
         super().__init__()
+
+        # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
+        # Only case where it is RuleBased is, when it is passed via the constructor, default is `NN`
+        if isinstance(predictor, RuleBasedPredictor):
+            self.predictor_type = 'RuleBased'
+        else:
+            self.predictor_type = 'NN'
+
+        # name of agent, also determines the path where models for agent and predictor are saved
+        if name is not None:
+            self.name = name
+        else:
+            self.name = '{}_{}Predictor'.format(self.__class__.__name__, self.predictor_type)
+
+        # initialize predictor. the default predictor is the Neural Network Predictor
+        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+        if predictor is not None:
+            self.predictor = predictor
+        else:
+            self.predictor = NNPredictor(model_path=self.predictor_model_path,
+                                         keep_models_fixed=keep_models_fixed)
 
         self.keep_models_fixed = keep_models_fixed
 
@@ -37,28 +61,16 @@ class OriginalRLAgent(player.AverageRandomPlayer):
                 raise Exception("No other featurizer than OriginalFeaturizer currently supported by OriginalRLAgent")
             self.featurizer = featurizer
 
-        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
-
-        if predictor is None:
-            self.predictor = predictors.Predictor(model_path=self.predictor_model_path, keep_models_fixed=keep_models_fixed)
-        else:
-            self.predictor = predictor
-
-        if name is not None:
-            self.name = name
-        else:
-            self.name = self.__class__.__name__
-
         self.old_state = None
         self.old_score = 0
         self.old_action = None
 
         self.clone_counter = 0
 
-        agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
-        if  os.path.exists(agent_path):
-            self.load_estimator(os.path.join(agent_path, 'model'))
-
+        # load agent
+        self.agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
+        if os.path.exists(self.agent_path):
+            self.load_estimator(os.path.join(self.agent_path, 'model'))
 
     def play_card(self, trump, first, played, players, played_in_round, first_player_index):
         """Plays a card according to the estimator Q function and learns
@@ -110,23 +122,20 @@ class OriginalRLAgent(player.AverageRandomPlayer):
     def load_estimator(self, name="default"):
         self.estimator.load(name)
 
-    def save_models(self, path=None):
+    def save_models(self):
         if self.keep_models_fixed:
             return
 
-        if path is None:
-            path = self.predictor_model_path
-        else:
-            path = os.path.join(path, 'Predictor/')
+        # save predictor model
+        if self.predictor_type == 'NN':
+            if not os.path.exists(self.predictor_model_path):
+                os.makedirs(self.predictor_model_path)
+            self.predictor.save_model(self.predictor_model_path)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
-        self.predictor.save_model(path)
-
-        agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
-        if not os.path.exists(agent_path):
-            os.makedirs(agent_path)
-        self.save_estimator(os.path.join(agent_path, 'model'))
+        # save agent model
+        if not os.path.exists(self.agent_path):
+            os.makedirs(self.agent_path)
+        self.save_estimator(os.path.join(self.agent_path, 'model'))
 
     def _remove_card_played(self, a):
         """

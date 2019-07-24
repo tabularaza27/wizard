@@ -362,7 +362,7 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
 """
 The functions below can be seen as seperate tests. All of them play some number
 of games and plot the results. The train_... functions also train some kind of agent
-and save the model once in a while while the evaluate_... functions keep the main model
+and save the model once in a while. The evaluate_... functions keep the main model
 which we want to evaluate fixed (though the opponent might still be learning)
 and only plot the game results.
 
@@ -384,7 +384,7 @@ def train_with_self_play_against_newest_version(tb, flags):
     but it also means that it might overfit against itself.
     """
 
-    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), predictor=RuleBasedPredictor())
+    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
     agents = [agent, agent.clone(), agent.clone(), agent.clone()]
 
     for game_num in play_games(lambda: agents, tb, range(4), flags):

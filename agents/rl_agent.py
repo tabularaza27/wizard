@@ -20,10 +20,8 @@ class RLAgent(AverageRandomPlayer):
     Attributes:
         name (str): Used for things like determining the folder
             where the model is saved. Defaults to class name.
-        predictor (NNPredictor): A predictor specific to that agent.
-            Doesn't share parameters with any other predictor.
-        prediction_type (str): determines which type of predictor is used. `NN` uses the specified neural
-                               network predictor. `RuleBase` uses the rule based predictor.
+        predictor (NNPredictor / RuleBasedPredictor): A predictor specific to that agent.
+            Doesn't share parameters with any other predictor. Can either be a NNPredictor or RuleBasedPredictor
         keep_models_fixed: If set to true, neither the predictor
             nor the extending agent is trained, so only inference is done.
         featurizer (OriginalFeaturizer): Used for getting the state
@@ -44,10 +42,18 @@ class RLAgent(AverageRandomPlayer):
     def __init__(self, name=None, predictor=None, keep_models_fixed=False, featurizer=None):
         super().__init__()
 
+        # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
+        # Only case where it is RuleBased is, when it is passed via the constructor, default is `NN`
+        if isinstance(predictor, RuleBasedPredictor):
+            self.predictor_type = 'RuleBased'
+        else:
+            self.predictor_type = 'NN'
+
+        # name of agent, also determines the path where models for agent and predictor are saved
         if name is not None:
             self.name = name
         else:
-            self.name = '{}_{}'.format(self.__class__.__name__,predictor.__class__.__name__)
+            self.name = '{}_{}Predictor'.format(self.__class__.__name__, self.predictor_type)
 
         # initialize predictor
         self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
@@ -56,14 +62,6 @@ class RLAgent(AverageRandomPlayer):
         else:
             self.predictor = NNPredictor(model_path=self.predictor_model_path,
                                          keep_models_fixed=keep_models_fixed)
-
-        # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
-        if isinstance(self.predictor, NNPredictor):
-            self.predictor_type = 'NN'
-        elif isinstance(self.predictor, RuleBasedPredictor):
-            self.predictor_type = 'RuleBased'
-        else:
-            raise ValueError('predictor needs to be object of class `NNPredictor` or `RuleBasedPredictor`')
 
         self.keep_models_fixed = keep_models_fixed
 
