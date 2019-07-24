@@ -422,6 +422,20 @@ def train_original_agent(tb, flags):
             agent.save_models()
 
 
+def train_rule_based_agent_with_predictor(tb, flags):
+    """Trains Predictor of Rulebased agent against trained RL PPO Agents with fixed models"""
+    agent = RuleBasedAgent(use_predictor=True)
+    rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
+    agents = [agent, rl_agent]
+
+    for i in range(2):
+        agents.append(rl_agent.clone())
+
+    for game_num in play_games(lambda: agents, tb, range(4), flags):
+        if game_num % flags['agent_save_frequency'] == 0:
+            agent.save_models()
+
+
 def evaluate(tb, flags, other_agents):
     """Evaluate the TFAgentsPPOAgent against `other_agents`"""
 
@@ -460,6 +474,7 @@ def main():
         'train_vs_old_self': (train_with_self_play_against_old_versions, []),
         'train_vs_current_self': (train_with_self_play_against_newest_version, []),
         'train_original': (train_original_agent, []),
+        'train_rule_based': (train_rule_based_agent_with_predictor, []),
         'evaluate': (evaluate, [lambda agent:
                                 [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
         # TODO some other evaluate_something could also be added here
@@ -470,7 +485,7 @@ def main():
         # learning against us, that's also not bad
         'evaluate_rule_based': (evaluate_rule_based, []),
         'evaluate_original': (
-        evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
+            evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
     })
 
     if len(sys.argv) > 1:

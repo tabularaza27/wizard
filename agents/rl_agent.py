@@ -57,6 +57,7 @@ class RLAgent(AverageRandomPlayer):
 
         # initialize predictor
         self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+        print('Modelpath', os.path.abspath(self.predictor_model_path))
         if predictor is not None:
             self.predictor = predictor
         else:

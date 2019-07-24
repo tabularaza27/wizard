@@ -16,7 +16,8 @@ from agents.rl_agent import RLAgent, ACTION_DIMENSIONS, MODELS_PATH
 from agents.tf_agents.layers import equal_spacing_fc
 from agents.tf_agents.networks import MaskedActorNetwork, DummyMaskedValueNetwork
 
-REPLAY_BUFFER_SIZE = 10 * sum(range(1, 16)) # 10 games
+REPLAY_BUFFER_SIZE = 10 * sum(range(1, 16))  # 10 games
+
 
 def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
     """Batch & convert all arrays to tensors in the input timestep"""
@@ -24,9 +25,10 @@ def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
     time_step = tf_agents.utils.nest_utils.batch_nested_array(time_step)
     return tf.contrib.framework.nest.map_structure(tf.convert_to_tensor, time_step)
 
+
 class TFAgentsPPOAgent(RLAgent):
     def __init__(self, name=None, actor_net=None, value_net=None,
-            predictor=None, keep_models_fixed=False, featurizer=None):
+                 predictor=None, keep_models_fixed=False, featurizer=None):
         super().__init__(name, predictor, keep_models_fixed, featurizer)
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
@@ -109,7 +111,7 @@ class TFAgentsPPOAgent(RLAgent):
         # even though PPO is on policy, storing the stuff for a bit seems to be ok
         # and the examples in the tf_agents repo also use one
         self.replay_buffer = TFUniformReplayBuffer(self.agent.collect_data_spec,
-            batch_size=1, max_length=REPLAY_BUFFER_SIZE)
+                                                   batch_size=1, max_length=REPLAY_BUFFER_SIZE)
         self.replay_buffer_position = 0
 
         self.clone_counter = 0
@@ -146,7 +148,7 @@ class TFAgentsPPOAgent(RLAgent):
             # a new episode started
             self.last_time_step = _to_tf_timestep(ts.restart(observation))
             self.last_action_step = self.policy.action(self.last_time_step)
-            return self.last_action_step.action.numpy()[0,0]
+            return self.last_action_step.action.numpy()[0, 0]
 
         new_time_step = _to_tf_timestep(ts.transition(observation, self.prev_reward))
         self._add_trajectory(self.last_time_step, self.last_action_step, new_time_step)
@@ -155,7 +157,7 @@ class TFAgentsPPOAgent(RLAgent):
         self.last_action_step = self.policy.action(new_time_step)
         self.prev_reward = None
 
-        return self.last_action_step.action.numpy()[0,0]
+        return self.last_action_step.action.numpy()[0, 0]
 
     def observe(self, reward, terminal):
         if not terminal:
@@ -184,8 +186,8 @@ class TFAgentsPPOAgent(RLAgent):
             name = self.name + 'Clone' + str(self.clone_counter)
 
         return TFAgentsPPOAgent(name=name, actor_net=self.actor_net,
-            value_net=self.value_net, predictor=self.predictor,
-            keep_models_fixed=self.keep_models_fixed, featurizer=self.featurizer)
+                                value_net=self.value_net, predictor=self.predictor,
+                                keep_models_fixed=self.keep_models_fixed, featurizer=self.featurizer)
 
     def save_models(self):
         """Save actor, critic and predictor
