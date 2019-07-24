@@ -3,6 +3,7 @@
 # This allows the file to be run in a test folder
 # as opposed to having to be in the root directory
 import sys
+
 sys.path.append('../')
 
 import os
@@ -22,8 +23,11 @@ from game_engine.player import Player, AverageRandomPlayer
 from agents.rl_agent import RLAgent
 from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
 from agents.rule_based_agent import RuleBasedAgent
+from agents.predictors import NNPredictor
+from agents.predictors import RuleBasedPredictor
 from agents.featurizers import OriginalFeaturizer
 from agents.original.rl_agents import OriginalRLAgent
+
 
 class TensorboardWrapper:
     def __init__(self):
@@ -47,10 +51,10 @@ class TensorboardWrapper:
 
     def launch_tensorboard(self):
         tensorboard = subprocess.Popen(['tensorboard',
-                '--logdir', self.logdir,
-                '--reload_interval', str(10)],
-            stdout=open(self.logdir + 'stdout', 'w'),
-            stderr=open(self.logdir + 'stderr', 'w'))
+                                        '--logdir', self.logdir,
+                                        '--reload_interval', str(10)],
+                                       stdout=open(self.logdir + 'stdout', 'w'),
+                                       stderr=open(self.logdir + 'stderr', 'w'))
         atexit.register(tensorboard.terminate)
 
     def set_game_num(self, game_num):
@@ -58,6 +62,7 @@ class TensorboardWrapper:
 
     def view_as(self, agent, name=None):
         return TensorboardAgentView(self, agent, name)
+
 
 class TensorboardAgentView:
     """
@@ -81,6 +86,7 @@ class TensorboardAgentView:
     def histogram(self, name, value):
         with self.filewriter.as_default(), tf.contrib.summary.always_record_summaries():
             tf.contrib.summary.histogram(name, value, step=self.tb.game_num)
+
 
 class AgentPool:
     """
@@ -136,8 +142,8 @@ class AgentPool:
         num_additional_current_versions = 3 - num_past_versions
 
         return ([self.agent]
-            + self.precomputed_clones[:num_additional_current_versions]
-            + random.sample(self.pool, num_past_versions))
+                + self.precomputed_clones[:num_additional_current_versions]
+                + random.sample(self.pool, num_past_versions))
 
     def add_current_version(self):
         """
@@ -158,7 +164,7 @@ class AgentPool:
         # this clone is also updated which we don't want
 
         clone = self.agent.__class__(name=clone_name,
-            keep_models_fixed=True, featurizer=self.agent.featurizer)
+                                     keep_models_fixed=True, featurizer=self.agent.featurizer)
 
         self.pool.append(clone)
         self.save()
@@ -182,11 +188,12 @@ class AgentPool:
             pool_data = json.load(f)
             for agent_name in pool_data:
                 agent = self.agent.__class__(name=agent_name,
-                    keep_models_fixed=True, featurizer=self.agent.featurizer)
+                                             keep_models_fixed=True, featurizer=self.agent.featurizer)
                 self.pool.append(agent)
 
+
 def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
-        avg_score: float, win_percentage: float):
+                     avg_score: float, win_percentage: float):
     """
     Use this function after a number of games have been played by some player
     and you got the results of the games (avg_score, win_percentage).
@@ -206,7 +213,7 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
 
     # this value is only available after the predictor has been trained
     # the frequency of this may be different than plotting frequency
-    if agent.predictor.current_loss is not None:
+    if isinstance(agent.predictor, NNPredictor) and agent.predictor.current_loss is not None:
         tb.scalar('5_predictor_loss', agent.predictor.current_loss)
         tb.scalar('3_predictor_acc', agent.predictor.current_acc)
 
@@ -220,7 +227,7 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
 
         # real prediction accuracy
         prediction_accuracy = (len(prediction_differences)
-            - np.count_nonzero(prediction_differences)) / len(prediction_differences)
+                               - np.count_nonzero(prediction_differences)) / len(prediction_differences)
         tb.scalar('4_predictor_acc_real', prediction_accuracy)
     agent.predictor.prediction_differences = []
 
@@ -230,9 +237,9 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
 
         # mean predictions
         for plt_name, datapoint_name in [
-                ('7_overall_mean_predictions', 'overall'),
-                ('8_correct_mean_predictions', 'correct_prediction'),
-                ('9_incorrect_mean_predictions', 'incorrect_prediction')]:
+            ('7_overall_mean_predictions', 'overall'),
+            ('8_correct_mean_predictions', 'correct_prediction'),
+            ('9_incorrect_mean_predictions', 'incorrect_prediction')]:
             data = agent.predictor.predictions[datapoint_name][amount_cards]
             if len(data) == 0:
                 continue
@@ -240,15 +247,16 @@ def tensorboard_plot(agent: Player, tb: TensorboardAgentView,
 
         # prediction distributions
         for plt_name, datapoint_name in [
-                ('2_overall_predictions', 'overall'),
-                ('3_correct_predictions', 'correct_prediction'),
-                ('4_incorrect_predictions', 'incorrect_prediction')]:
+            ('2_overall_predictions', 'overall'),
+            ('3_correct_predictions', 'correct_prediction'),
+            ('4_incorrect_predictions', 'incorrect_prediction')]:
             tb.histogram(f'{plt_name}_{amount_cards}',
-                agent.predictor.predictions[datapoint_name][amount_cards])
+                         agent.predictor.predictions[datapoint_name][amount_cards])
 
         # reset predictions variable
         for e in ['overall', 'correct_prediction', 'incorrect_prediction']:
             agent.predictor.predictions[e][amount_cards] = []
+
 
 def calculate_win_percentage(scores):
     """Given the scores for all players, calculate the win percentage for each player
@@ -266,6 +274,7 @@ def calculate_win_percentage(scores):
     win_percentages = np.zeros(scores.shape[1])
     win_percentages[player_indices] = win_counts / len(scores)
     return win_percentages
+
 
 def plot_agents(tb, scores, agents, agents_to_plot):
     """
@@ -287,7 +296,8 @@ def plot_agents(tb, scores, agents, agents_to_plot):
 
     for agent_position, agent, agent_tb_view in agents_to_plot:
         tensorboard_plot(agent, agent_tb_view,
-            mean_scores[agent_position], win_percentages[agent_position])
+                         mean_scores[agent_position], win_percentages[agent_position])
+
 
 def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=True):
     """Play games infinitly, plot results and yield the current game number every game
@@ -310,7 +320,7 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
 
         shuffled_agents = [agent for agent, old_position in agents_with_positions]
         shuffled_agents_to_plot = [position for position, (agent, old_position)
-            in enumerate(agents_with_positions) if old_position in agents_to_plot]
+                                   in enumerate(agents_with_positions) if old_position in agents_to_plot]
 
         shuffled_scores = Game(players=shuffled_agents).play_game()
 
@@ -348,6 +358,7 @@ def play_games(player_selector, tb, agents_to_plot, flags, shuffle_positions=Tru
 
         yield game_num
 
+
 """
 The functions below can be seen as seperate tests. All of them play some number
 of games and plot the results. The train_... functions also train some kind of agent
@@ -363,6 +374,7 @@ All of the functions take at least these two arguments:
 The functions are called from main() quite directly based on the command line arguments.
 """
 
+
 def train_with_self_play_against_newest_version(tb, flags):
     """
     Do self play with where all of the 3 opponents are of the same type
@@ -372,12 +384,13 @@ def train_with_self_play_against_newest_version(tb, flags):
     but it also means that it might overfit against itself.
     """
 
-    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer())
+    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), predictor=RuleBasedPredictor())
     agents = [agent, agent.clone(), agent.clone(), agent.clone()]
 
     for game_num in play_games(lambda: agents, tb, range(4), flags):
         if game_num % flags['agent_save_frequency'] == 0:
             agent.save_models()
+
 
 def train_with_self_play_against_old_versions(tb, flags):
     """
@@ -396,6 +409,7 @@ def train_with_self_play_against_old_versions(tb, flags):
 
         if game_num % flags['pool_save_frequency'] == 0:
             agent_pool.add_current_version()
+
 
 def train_original_agent(tb, flags):
     agent = OriginalRLAgent()
@@ -417,6 +431,7 @@ def evaluate(tb, flags, other_agents):
     for game_num in play_games(lambda: agents, tb, range(4), flags):
         pass
 
+
 def evaluate_rule_based(tb, flags):
     """
     Evaluate the RuleBasedAgent against 3 AverageRandomPlayers.
@@ -428,6 +443,7 @@ def evaluate_rule_based(tb, flags):
         name='AverageRandomPlayer' + str(i)) for i in range(3)]
     for game_num in play_games(lambda: agents, tb, range(4), flags):
         pass
+
 
 def main():
     default_flags = ({
@@ -445,7 +461,7 @@ def main():
         'train_vs_current_self': (train_with_self_play_against_newest_version, []),
         'train_original': (train_original_agent, []),
         'evaluate': (evaluate, [lambda agent:
-            [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
+                                [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
         # TODO some other evaluate_something could also be added here
         # which uses other opponents
         # TODO we allow the rule based agent predictor to learn while evaluating against it
@@ -453,7 +469,8 @@ def main():
         # But on the other hand if we can, while we are fixed, beat an agent which is still
         # learning against us, that's also not bad
         'evaluate_rule_based': (evaluate_rule_based, []),
-        'evaluate_original': (evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
+        'evaluate_original': (
+        evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
     })
 
     if len(sys.argv) > 1:
@@ -463,6 +480,7 @@ def main():
 
     selected_fn, args = subcmds[selected_subcmd]
     selected_fn(TensorboardWrapper(), flags, *args)
+
 
 if __name__ == '__main__':
     tf.compat.v1.enable_v2_behavior()

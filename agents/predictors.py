@@ -9,6 +9,7 @@ from game_engine.card import Card
 
 logdir = '/logs'
 
+
 class PredictorNetwork(K.models.Model):
     def __init__(self, x_dim, y_dim):
         super().__init__(name='predictor_network', dynamic=False)
@@ -27,8 +28,9 @@ class PredictorNetwork(K.models.Model):
             x = layer(x)
         return x
 
-class Predictor:
-    """Predictor object, predicts the number of tricks achieved in a round.
+
+class NNPredictor:
+    """Neural Network Predictor, predicts the number of tricks achieved in a round.
 
     Attributes:
         x_dim (int): The input shape of the NN. Equal to
@@ -219,3 +221,93 @@ class Predictor:
             #     print("Abs Prediction difference: ", np.mean(self.prediction_differences))
             # # self.predictions = {i: [] for i in range(0, 16)}
             # self.prediction_differences = []
+
+
+class RuleBasedPredictor:
+    """Predictor that uses rule based approach to predict amount of tricks"""
+    def __init__(self, aggression=0.0):
+        """
+        Args:
+            aggression (float): aggression is a measure of how high the agent naturally tries to predict. High aggression is good
+                                with weak opponents and low aggression for quality opponents. Takes values between -1 and 1.
+        """
+        self.aggression = RuleBasedPredictor.bound(aggression, 1, -1)
+
+        # keep track of current round, is needed for reporting purposes
+        self.current_round = 0
+
+        # stores the predictions made by the predictor (statistics)
+        # 0 stores all the predictions, the other keys correspond to the number of cards
+        self.predictions = {"overall": {i: [] for i in range(0, 16)},
+                            "correct_prediction": {i: [] for i in range(0, 16)},
+                            "incorrect_prediction": {i: [] for i in range(0, 16)}}
+
+        # stores the absolute difference to the predictions (statistics)
+        self.prediction_differences = []
+
+    def make_prediction(self, initial_cards, trump_color_card):
+        """predicts the amount of tricks that the player should win. It does this assigning
+        an expected return for each card and sums all the expected returns together. It also takes into
+        consideration the aggression of the agent.
+
+        Args:
+            initial_cards (list[Card]: The current hand of the agent
+            trump_color_card (Card): A card which has the trump color
+
+        Returns:
+            int: The predicted number of tricks
+        """
+        self.current_round = len(initial_cards)
+
+        prediction = 0
+        for card in initial_cards:
+            if card.value == 14:
+                prediction += 0.95 + (0.05 * self.aggression)
+            elif card.color == trump_color_card.color:
+                prediction += (card.value * (0.050 + (0.005 * self.aggression))) + 0.3
+            else:
+                prediction += (card.value * (0.030 + (0.005 * self.aggression)))
+        prediction = round(RuleBasedPredictor.bound(prediction, len(initial_cards), 0), 0)
+
+        # the reason why a tuple is returned is to keep consistency with the NN Predictor ( defined above ). There
+        # the first entry of the tuple is an np.array. here it is just an int
+
+        return prediction, prediction
+
+    def add_game_result(self, prediction, num_tricks_achieved):
+        """Adds game result for plotting purpusoes
+
+        Note:
+            The add_game_result of the NN Predictor takes in an ndarray as first argument. Here it is just an int
+
+        Args:
+            prediction (int): predicted number of tricks
+            num_tricks_achieved: The number of tricks achieved
+        """
+        # store prediction values for reporting
+        if prediction == num_tricks_achieved:
+            self.predictions["correct_prediction"][0].append(prediction)
+            self.predictions["correct_prediction"][self.current_round].append(prediction)
+        else:
+            self.predictions["incorrect_prediction"][0].append(prediction)
+            self.predictions["incorrect_prediction"][self.current_round].append(prediction)
+
+        self.predictions["overall"][0].append(prediction)
+        self.predictions["overall"][self.current_round].append(prediction)
+        self.prediction_differences.append(abs(prediction - num_tricks_achieved))
+
+    @staticmethod
+    def bound(value, max, min):
+        """
+        Bounds the value between a given range.
+        :param value:
+        :param max:
+        :param min:
+        :return: a value between the maximum and minimum
+        """
+        if value > max:
+            return max
+        elif value < min:
+            return min
+        else:
+            return value

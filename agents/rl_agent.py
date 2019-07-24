@@ -3,7 +3,8 @@ from typing import List, Dict
 
 import numpy as np
 
-from agents.predictors import Predictor
+from agents.predictors import NNPredictor
+from agents.predictors import RuleBasedPredictor
 from agents.featurizers import OriginalFeaturizer, FullFeaturizer
 from game_engine.player import Player, AverageRandomPlayer
 from game_engine.card import Card
@@ -19,8 +20,10 @@ class RLAgent(AverageRandomPlayer):
     Attributes:
         name (str): Used for things like determining the folder
             where the model is saved. Defaults to class name.
-        predictor (Predictor): A predictor specific to that agent.
+        predictor (NNPredictor): A predictor specific to that agent.
             Doesn't share parameters with any other predictor.
+        prediction_type (str): determines which type of predictor is used. `NN` uses the specified neural
+                               network predictor. `RuleBase` uses the rule based predictor.
         keep_models_fixed: If set to true, neither the predictor
             nor the extending agent is trained, so only inference is done.
         featurizer (OriginalFeaturizer): Used for getting the state
@@ -44,14 +47,23 @@ class RLAgent(AverageRandomPlayer):
         if name is not None:
             self.name = name
         else:
-            self.name = self.__class__.__name__
+            self.name = '{}_{}'.format(self.__class__.__name__,predictor.__class__.__name__)
 
+        # initialize predictor
         self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
         if predictor is not None:
             self.predictor = predictor
         else:
-            self.predictor = Predictor(model_path=self.predictor_model_path,
-                                       keep_models_fixed=keep_models_fixed)
+            self.predictor = NNPredictor(model_path=self.predictor_model_path,
+                                         keep_models_fixed=keep_models_fixed)
+
+        # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
+        if isinstance(self.predictor, NNPredictor):
+            self.predictor_type = 'NN'
+        elif isinstance(self.predictor, RuleBasedPredictor):
+            self.predictor_type = 'RuleBased'
+        else:
+            raise ValueError('predictor needs to be object of class `NNPredictor` or `RuleBasedPredictor`')
 
         self.keep_models_fixed = keep_models_fixed
 
@@ -64,16 +76,13 @@ class RLAgent(AverageRandomPlayer):
         self.color_left_indicator = np.zeros((PLAYER - 1, 4))
         self.trick_index = 0
 
-        # TODO remove this when the plotting functionality is there,
-        # should be able to handle this easier
-        # Tracks how much of the last 10000 cards which the agent wanted to play
-        # were actually valid cards -> gives us an estimate on how good the agent
-        # actually understands the rules
         self.last_10000_cards_played_valid = []
         self.valid_rate = 0
 
     def save_models(self, path=None):
-        if self.keep_models_fixed:
+        """Saves model for predictor. Model for rl agent needs to be saved in agent class e.g. TFAgentsPPOAgent.
+        Only save models if predictor is a NN predictor and keep models are not fixed"""
+        if self.keep_models_fixed or self.predictor_type != 'NN':
             return
 
         if path is None:
@@ -148,9 +157,17 @@ class RLAgent(AverageRandomPlayer):
         return super().play_card(trump, first, played, players, played_in_round, first_player_index)
 
     def get_prediction(self, trump: Card, num_players: int):
-        """Return the round prediction using the build in NN Predictor"""
-        self.prediction_x, prediction = \
-            self.predictor.make_prediction(self.hand, trump)
+        """Return the round prediction using the build in NN Predictor
+
+        Args:
+            trump (Card):
+            num_players (int):
+
+        Returns:
+            int: prediction
+        """
+        self.prediction_x, prediction = self.predictor.make_prediction(self.hand, trump)
+
         return prediction
 
     def announce_result(self, num_tricks_achieved: int, reward: float):
