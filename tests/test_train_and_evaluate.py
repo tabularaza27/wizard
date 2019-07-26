@@ -463,16 +463,11 @@ def evaluate_all_combinations(flags):
     # RB - Rule Based
     # Avg - AverageRandomPlayer
     # DQN is the Original DQN Implementation from the github repo we found
-    # other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
-    #                 'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
-    #                 'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
-    #                 'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
-    #                 'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
-    #                 'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
-
     other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
                     'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
                     'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+                    'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
+                    'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
                     'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
 
     # get all possible combinations of the above agents
