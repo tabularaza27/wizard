@@ -537,8 +537,8 @@ def evaluate(tb, flags, other_agents):
                 if hasattr(agent, 'save_models'):
                     print(agent.name, 'train')
                     agent.save_models()
-        # end evaluation process after 30000 games
-        if game_num == 30000:
+        # end evaluation process after 60000 games (probably way less is enough)
+        if game_num == 60000:
             break
 
 
