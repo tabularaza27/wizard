@@ -14,6 +14,7 @@ import subprocess
 import itertools
 import atexit
 import psutil
+import multiprocessing as mp
 
 import numpy as np
 import tensorflow as tf
@@ -30,24 +31,29 @@ from agents.original.rl_agents import OriginalRLAgent
 
 
 class TensorboardWrapper:
-    def __init__(self):
+    def __init__(self, launch_tensorboard=True, logpath=None):
+        self.logpath = logpath
         self.create_logdir()
-        self.launch_tensorboard()
+        if launch_tensorboard:
+            self.launch_tensorboard()
 
     def create_logdir(self):
         """
-        Create logdir in /logs/$id where $id is counting up.
-        Save the path to self.logdir.
+        Create logdir of form /logpath/$id if logpath is given, default is /logs/$id where $id is counting up.
+        Saves the path to self.logdir.
         """
 
-        path = 'logs/'
+        if self.logpath:
+            path = self.logpath
+        else:
+            path = 'logs/'
 
         test_count = 1
-        while os.path.exists(path + str(test_count)):
+        while os.path.exists(os.path.join(path, str(test_count))):
             test_count += 1
 
-        self.logdir = path + str(test_count) + '/'
-        os.makedirs(self.logdir)
+        self.logdir = os.path.join(path, str(test_count))
+        os.makedirs(self.logdir, exist_ok=True)
 
     def launch_tensorboard(self):
         tensorboard = subprocess.Popen(['tensorboard',
@@ -77,7 +83,7 @@ class TensorboardAgentView:
 
         if name is None:
             name = agent.name
-        self.filewriter = tf.contrib.summary.create_file_writer(self.tb.logdir + name)
+        self.filewriter = tf.contrib.summary.create_file_writer(os.path.join(self.tb.logdir, name))
 
     def scalar(self, name, value):
         with self.filewriter.as_default(), tf.contrib.summary.always_record_summaries():
@@ -436,14 +442,109 @@ def train_rule_based_agent_with_predictor(tb, flags):
             agent.save_models()
 
 
+def evaluate_all_combinations(flags):
+    """Evaluate trained TFAgentsPPOAgent against all possible combination of other agents
+
+    Args:
+        flags (dict): Constants used throughout the program, usually things like how often stuff should be plotted / saved etc.
+
+    The following agents are evaluated against:
+
+    * meRLin + rule based prediction
+    * Rule based + NN predictor
+    * Rule based + RuleBased predictor
+    * DQNAgent + RuleBased predictor
+    * DQNAgent + NN prediction
+    * AverageRandomPlayer
+    """
+
+    # Nomenclature of Agents: agentName_predictor
+    # NN - NeuralNetwork
+    # RB - Rule Based
+    # Avg - AverageRandomPlayer
+    # DQN is the Original DQN Implementation from the github repo we found
+    # other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
+    #                 'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
+    #                 'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+    #                 'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
+    #                 'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
+    #                 'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
+
+    other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
+                    'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
+                    'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+                    'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
+
+    # get all possible combinations of the above agents
+    combinations = list(itertools.combinations(other_agents, 3))
+
+    print('Start Parallel Process')
+
+    # start evaluation processes with parallel processing
+    pool = mp.Pool(mp.cpu_count())
+
+    for combination in combinations:
+        pool.apply_async(evaluate_single_combination, args=(combination, flags, other_agents))
+
+    # result_objects = [pool.apply_async(evaluate_single_combination, args=(combination, flags, other_agents)) for combination in combinations]
+    # results = [r.get()[1] for r in result_objects]
+    pool.close()
+    pool.join()
+
+    # print('Results', results)
+    print('Parallel Process Finished')
+    # for combination in combinations:
+    #    evaluate_single_combination(combination, flags, other_agents)
+
+
+def evaluate_single_combination(combination, flags, other_agents):
+    """Evaluates trained TFAgentsPPOAgent against one combination (3 Agents) of agents
+
+    the models and logs for every combination are saved in a dedicated folder (/evaluation/combination_name)
+    combinations are named the following `agent1__agent2__agent3`
+
+    Args:
+        combination (tuple): (agent1_id, agent2_id, agent3_id)
+        flags (dict): Constants used throughout the program, usually things like how often stuff should be plotted / saved etc.
+        other_agents (dict): definition of agents. see evaluate_all_combinations()
+    """
+    combination = list(combination)
+    combination_name = f'{combination[0]}__{combination[1]}__{combination[2]}'
+    experiment_path = os.path.join('evaluation', combination_name)
+    logpath = os.path.join(experiment_path, 'logs')
+    modelspath = os.path.join(experiment_path, 'models')
+
+    # create logger
+    tb = TensorboardWrapper(launch_tensorboard=False, logpath=logpath)
+
+    # create function that returns instances of the agents ( this is done to be in accordance to the rest of the
+    # implementation --> see main() )
+    agent_creator = lambda: [create_agent(other_agents[agent], models_path=modelspath) for agent in combination]
+
+    print(f'########## Start Evaluation against agents {combination_name} ############')
+    evaluate(tb, flags, other_agents=agent_creator)
+
+
 def evaluate(tb, flags, other_agents):
-    """Evaluate the TFAgentsPPOAgent against `other_agents`"""
+    """Evaluate the TFAgentsPPOAgent against `other_agents`
 
-    agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
-    agents = [agent] + other_agents(agent)
+    Models for all agents are save, meaning that they are trained. Note that our agent has models fixed so in the
+    save_models() method nothing happens, i.e. it does not train. We let the other agents learn during evaluation to
+    show the strength of our agent.
+    """
 
-    for game_num in play_games(lambda: agents, tb, range(4), flags):
-        pass
+    rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
+    evaluation_agents = [rl_agent] + other_agents()
+
+    for game_num in play_games(lambda: evaluation_agents, tb, range(4), flags):
+        if game_num % flags['agent_save_frequency'] == 0:
+            for agent in evaluation_agents:
+                if hasattr(agent, 'save_models'):
+                    print(agent.name, 'train')
+                    agent.save_models()
+        # end evaluation process after 30000 games
+        if game_num == 30000:
+            break
 
 
 def evaluate_rule_based(tb, flags):
@@ -457,6 +558,37 @@ def evaluate_rule_based(tb, flags):
         name='AverageRandomPlayer' + str(i)) for i in range(3)]
     for game_num in play_games(lambda: agents, tb, range(4), flags):
         pass
+
+
+def create_agent(agent_dict, models_path):
+    """Creates instance of agent according to specification given in args
+
+    Args:
+        agent_dict (dict): {'Agent': AgentClass, 'Predictor': PredictorClass}
+        models_path (str): path to where the models are loaded and saved
+    Returns:
+        instance of agent according to given specifications
+    """
+    agent_class = agent_dict['Agent']
+    predictor_class = agent_dict['Predictor']
+
+    if agent_class == TFAgentsPPOAgent:
+        agent = agent_class(predictor=predictor_class(), featurizer=OriginalFeaturizer(), models_path=models_path)
+    elif agent_class == OriginalRLAgent:
+        agent = agent_class(predictor=predictor_class(), models_path=models_path)
+    elif agent_class == RuleBasedAgent:
+        if predictor_class == NNPredictor:
+            agent = agent_class(use_predictor=True, models_path=models_path)
+        elif predictor_class == RuleBasedPredictor:
+            agent = agent_class(use_predictor=False)
+        else:
+            raise ValueError('No valid predictor has been specified for a RuleBasedAgent')
+    elif agent_class == AverageRandomPlayer:
+        agent = agent_class()
+    else:
+        raise ValueError(f"Agent Class '{agent_class}' is invalid")
+
+    return agent
 
 
 def main():
@@ -475,17 +607,11 @@ def main():
         'train_vs_current_self': (train_with_self_play_against_newest_version, []),
         'train_original': (train_original_agent, []),
         'train_rule_based': (train_rule_based_agent_with_predictor, []),
-        'evaluate': (evaluate, [lambda agent:
+        'evaluate': (evaluate, [lambda:
                                 [AverageRandomPlayer(), RuleBasedAgent(use_predictor=True), RuleBasedAgent()]]),
-        # TODO some other evaluate_something could also be added here
-        # which uses other opponents
-        # TODO we allow the rule based agent predictor to learn while evaluating against it
-        # maybe it should learn stuff before and then be fixed ?
-        # But on the other hand if we can, while we are fixed, beat an agent which is still
-        # learning against us, that's also not bad
         'evaluate_rule_based': (evaluate_rule_based, []),
         'evaluate_original': (
-            evaluate, [lambda agent: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
+            evaluate, [lambda: [OriginalRLAgent(keep_models_fixed=True), RuleBasedAgent(), RuleBasedAgent()]])
     })
 
     if len(sys.argv) > 1:
@@ -493,8 +619,11 @@ def main():
     else:
         selected_subcmd = 'train_vs_old_self'
 
-    selected_fn, args = subcmds[selected_subcmd]
-    selected_fn(TensorboardWrapper(), flags, *args)
+    if selected_subcmd == 'evaluate_all_combinations':
+        evaluate_all_combinations(flags=flags)
+    else:
+        selected_fn, args = subcmds[selected_subcmd]
+        selected_fn(TensorboardWrapper(), flags, *args)
 
 
 if __name__ == '__main__':

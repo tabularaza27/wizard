@@ -39,8 +39,13 @@ class RLAgent(AverageRandomPlayer):
             which is what this variable is for
     """
 
-    def __init__(self, name=None, predictor=None, keep_models_fixed=False, featurizer=None):
+    def __init__(self, name=None, predictor=None, keep_models_fixed=False, featurizer=None, models_path=None):
         super().__init__()
+
+        if models_path:
+            self.models_path = models_path
+        else:
+            self.models_path = MODELS_PATH
 
         # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
         # Only case where it is RuleBased is, when it is passed via the constructor, default is `NN`
@@ -56,8 +61,8 @@ class RLAgent(AverageRandomPlayer):
             self.name = '{}_{}Predictor'.format(self.__class__.__name__, self.predictor_type)
 
         # initialize predictor
-        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
-        print('Modelpath', os.path.abspath(self.predictor_model_path))
+        self.predictor_model_path = os.path.join(self.models_path, self.name, 'Predictor/')
+        print('Predictor Modelpath', os.path.abspath(self.predictor_model_path))
         if predictor is not None:
             self.predictor = predictor
         else:

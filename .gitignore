@@ -3,4 +3,5 @@ tests/models/
 tests/logs/
 tests/plotting/plots/
 tests/pools/
+tests/evaluation/
 dependencies/

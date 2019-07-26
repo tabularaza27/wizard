@@ -16,11 +16,10 @@ class RuleBasedAgent(player.Player):
     win probability given the cards. It then makes a decision of what card based
     on the probabilities.
 
-    Attributes:
-        name (str): name of agent
-        aggresion (float): see comment below
-        use_predictor (bool): if True uses neural net as predictor, else use rule base predictor
-        keep_models_fixed (bool): if True, NN is not trained if agent uses it for predictions
+    Attributes: name (str): name of agent aggresion (float): see comment below use_predictor (bool): if True uses
+    neural net as predictor, else use rule base predictor keep_models_fixed (bool): if True, NN is not trained if
+    agent uses it for predictions models_path (str): path where model for predictor is save. Only used if
+    use_predictor is True. If not specified default value is used
 
     """
 
@@ -28,7 +27,7 @@ class RuleBasedAgent(player.Player):
     # the action and inferences of the rule-based agent
     DEBUG = False
 
-    def __init__(self, name=None, aggression=0.0, use_predictor=False, keep_models_fixed=False):
+    def __init__(self, name=None, aggression=0.0, use_predictor=False, keep_models_fixed=False, models_path=None):
         super().__init__()
         self.round = 1
         self.num_players = 4
@@ -40,6 +39,11 @@ class RuleBasedAgent(player.Player):
         else:
             self.name = self.__class__.__name__
 
+        if models_path:
+            self.models_path = models_path
+        else:
+            self.models_path = MODELS_PATH
+
         # aggression is a measure of how high the agent naturally tries to predict. High aggression is good
         # with weak opponents and low aggression for quality opponents. Takes values between -1 and 1.
         self.aggression = RuleBasedAgent.bound(aggression, 1, -1)
@@ -48,11 +52,11 @@ class RuleBasedAgent(player.Player):
         self.keep_models_fixed = keep_models_fixed
 
         if self.use_predictor:
-            self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+            self.predictor_model_path = os.path.join(self.models_path, self.name, 'Predictor/')
             self.predictor = NNPredictor(model_path=self.predictor_model_path, keep_models_fixed=self.keep_models_fixed)
 
     def save_models(self):
-        if self.keep_models_fixed:
+        if self.keep_models_fixed or not self.use_predictor:
             return
         if not os.path.exists(self.predictor_model_path):
             os.makedirs(self.predictor_model_path)

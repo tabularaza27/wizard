@@ -17,8 +17,13 @@ class OriginalRLAgent(player.AverageRandomPlayer):
     """A computer player that learns using reinforcement learning."""
 
     def __init__(self, estimator=None, policy=None, featurizer=None, predictor=None, name=None,
-                 keep_models_fixed=False):
+                 keep_models_fixed=False, models_path=None):
         super().__init__()
+
+        if models_path:
+            self.models_path = models_path
+        else:
+            self.models_path = MODELS_PATH
 
         # determine type of predictor. Is either `NN` (Neural Network) or `RuleBased`
         # Only case where it is RuleBased is, when it is passed via the constructor, default is `NN`
@@ -34,7 +39,7 @@ class OriginalRLAgent(player.AverageRandomPlayer):
             self.name = '{}_{}Predictor'.format(self.__class__.__name__, self.predictor_type)
 
         # initialize predictor. the default predictor is the Neural Network Predictor
-        self.predictor_model_path = os.path.join(MODELS_PATH, self.name, 'Predictor/')
+        self.predictor_model_path = os.path.join(self.models_path, self.name, 'Predictor/')
         if predictor is not None:
             self.predictor = predictor
         else:
@@ -71,7 +76,7 @@ class OriginalRLAgent(player.AverageRandomPlayer):
         self.clone_counter = 0
 
         # load agent
-        self.agent_path = os.path.join(MODELS_PATH, self.name, 'Agent')
+        self.agent_path = os.path.join(self.models_path, self.name, 'Agent')
         if os.path.exists(self.agent_path):
             self.load_estimator(os.path.join(self.agent_path, 'model'))
 

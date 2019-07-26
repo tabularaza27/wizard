@@ -28,8 +28,13 @@ def _to_tf_timestep(time_step: ts.TimeStep) -> ts.TimeStep:
 
 class TFAgentsPPOAgent(RLAgent):
     def __init__(self, name=None, actor_net=None, value_net=None,
-                 predictor=None, keep_models_fixed=False, featurizer=None):
-        super().__init__(name, predictor, keep_models_fixed, featurizer)
+                 predictor=None, keep_models_fixed=False, featurizer=None, models_path=None):
+        super().__init__(name, predictor, keep_models_fixed, featurizer, models_path=models_path)
+
+        if models_path:
+            self.models_path = models_path
+        else:
+            self.models_path = MODELS_PATH
 
         action_spec = BoundedTensorSpec((1,), tf.int64, 0, ACTION_DIMENSIONS - 1)
 
@@ -118,7 +123,7 @@ class TFAgentsPPOAgent(RLAgent):
 
     def _create_train_checkpointer(self):
         self.train_checkpointer = tf_agents.utils.common.Checkpointer(
-            ckpt_dir=os.path.join(MODELS_PATH, self.name, 'Agent'), agent=self.agent)
+            ckpt_dir=os.path.join(self.models_path, self.name, 'Agent'), agent=self.agent)
 
     def _add_trajectory(self, prev_time_step, action, new_time_step):
         """Add a trajectory (prev_time_step, action, new_time_step) to the replay buffer
@@ -200,7 +205,7 @@ class TFAgentsPPOAgent(RLAgent):
         if self.keep_models_fixed:
             return
 
-        super().save_models(os.path.join(MODELS_PATH, self.name))
+        super().save_models(os.path.join(self.models_path, self.name))
         if not hasattr(self, 'train_checkpointer'):
             self._create_train_checkpointer()
         self.train_checkpointer.save(0)
