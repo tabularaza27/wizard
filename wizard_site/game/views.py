@@ -23,7 +23,7 @@ class TrickManager(Trick):
         self.first_card = Card("White", 0)
 
 
-players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()), RuleBasedAgent(), RuleBasedAgent(), Player()]
+players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()) for _ in range(3)] + [Player()]
 # players = [RuleBasedAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
 game_round = Round(round_num=1, players=players)
 trick = TrickManager(Card('White', 0), None, 0, [None])
