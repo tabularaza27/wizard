@@ -27,7 +27,7 @@ players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()) for _ in range(3)] 
 # players = [RuleBasedAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
 game_round = Round(round_num=1, players=players)
 trick = TrickManager(Card('White', 0), None, 0, [None])
-blind = False
+blind = True
 
 
 def home(request):
