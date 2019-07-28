@@ -6,10 +6,10 @@ from game_engine.trick import Trick
 from agents.rule_based_agent import RuleBasedAgent
 from game_engine.round import Round
 from game_engine.player import Player
-from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
-from agents.featurizers import OriginalFeaturizer
-import tensorflow as tf
-tf.compat.v1.enable_v2_behavior()
+# from agents.tf_agents.tf_agents_ppo_agent import TFAgentsPPOAgent
+# from agents.featurizers import OriginalFeaturizer
+# import tensorflow as tf
+# tf.compat.v1.enable_v2_behavior()
 
 
 class TrickManager(Trick):
@@ -23,8 +23,8 @@ class TrickManager(Trick):
         self.first_card = Card("White", 0)
 
 
-players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()) for _ in range(3)] + [Player()]
-# players = [RuleBasedAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
+# players = [TFAgentsPPOAgent(featurizer=OriginalFeaturizer()) for _ in range(3)] + [Player()]
+players = [RuleBasedAgent(), RuleBasedAgent(), RuleBasedAgent(), Player()]
 game_round = Round(round_num=1, players=players)
 trick = TrickManager(Card('White', 0), None, 0, [None])
 blind = True
@@ -79,10 +79,10 @@ def get_prediction(request, game_round_no):
     for player in players:
         print(str(player.hand))
     if game_round_no > 10:
-        width = len(players[2].hand) * 55
+        width = len(players[1].hand) * 55
         height = len(players[2].hand) * 33
     else:
-        width = len(players[2].hand) * 66
+        width = len(players[1].hand) * 66
         height = len(players[2].hand) * 50
     print("Trump Color: " + str(game_round.trump_card.color))
     return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
@@ -131,6 +131,8 @@ def get_play(request, game_round_no):
             print(players[player_index].get_playable_cards(trick.first_card))
             trick.new_card = (players[player_index].play_card(game_round.trump_card, trick.first_card, trick.trick_cards, players,
                                                               game_round.played_cards, game_round.first_player))
+            if trick.first_card.color == "White":
+                trick.first_card = trick.new_card
             trick.trick_cards[player_index] = trick.new_card
             if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
                 trick.current_winner = player_index
@@ -140,10 +142,10 @@ def get_play(request, game_round_no):
         player_index = (player_index + 1) % len(players)
         print("Current Winner: " + str(trick.current_winner))
     if game_round_no > 10:
-        width = len(players[2].hand) * 55
+        width = len(players[1].hand) * 55
         height = len(players[2].hand) * 33
     else:
-        width = len(players[2].hand) * 66
+        width = len(players[1].hand) * 66
         height = len(players[2].hand) * 50
     return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
                                          'right_agent': players[2], 'human_player': players[3],
@@ -184,6 +186,8 @@ def receive_play(request, game_round_no, trick_card):
                                       'trick_cards': trick_cards, 'blind': blind})
     if trick.first_player == 3:
         trick.first_card = player_card
+    elif trick.first_card.color == "White":
+        trick.first_card = trick.new_card
     trick.new_card = player_card
     trick.trick_cards[player_index] = trick.new_card
     game_round.played_cards[player_index].append(trick.old_card)
@@ -204,17 +208,19 @@ def receive_play(request, game_round_no, trick_card):
     while player_index != trick.first_player:
         # print(players[player_index].hand)
         print("Playable Cards for " + str(player_index) + ":")
-        print(players[player_index].get_playable_cards(Card('White', 0)))
+        print(players[player_index].get_playable_cards(trick.first_card))
         trick.new_card = (players[player_index].play_card(game_round.trump_card, trick.first_card, trick.trick_cards,
                                                           players, game_round.played_cards, game_round.first_player))
-        print(trick.new_card)
+        print("Chosen Card: " + str(trick.new_card))
+        if trick.first_card.color == "White":
+            trick.first_card = trick.new_card
         trick.trick_cards[player_index] = trick.new_card
         if trick.is_new_winner(trick.new_card, trick.old_card, game_round.trump_card, trick.first_card):
             trick.current_winner = player_index
             trick.old_card = trick.new_card
         game_round.played_cards[player_index].append(trick.old_card)
         player_index += 1
-    print("Winning Player: " + str(trick.current_winner))
+        print("Winning Player: " + str(trick.current_winner))
     players[trick.current_winner].wins += 1
     return redirect('show_result', game_round_no)
 
@@ -224,9 +230,12 @@ def show_result(request, game_round_no):
         for player in players:
             if player.prediction == player.wins:
                 player.score += player.prediction*10 + 20
+                player.accuracy += 1
             else:
                 player.score -= abs(player.prediction - player.wins)*10
         next = 'round'
+        if game_round_no == 15:
+            return redirect('end')
     else:
         game_round.first_player = (game_round.first_player + 1) % len(players)
         next = 'trick'
@@ -235,10 +244,10 @@ def show_result(request, game_round_no):
         if trick.trick_cards[(trick.first_player + index) % 4] is not None:
             trick_cards.append(trick.trick_cards[(trick.first_player + index) % 4])
     if game_round_no > 10:
-        width = len(players[2].hand) * 55
+        width = len(players[1].hand) * 55
         height = len(players[2].hand) * 33
     else:
-        width = len(players[2].hand) * 66
+        width = len(players[1].hand) * 66
         height = len(players[2].hand) * 50
     return render(request, 'game.html', {'left_agent': players[0], 'top_agent': players[1],
                                          'right_agent': players[2], 'human_player': players[3],
@@ -251,5 +260,9 @@ def show_result(request, game_round_no):
 def end(request):
     if game_round.round_num < 15:
         return redirect('play_game')
+    for player in players:
+        player.accuracy = round((player.accuracy * 100 / 15),2)
     return render(request, 'end.html', {'player_1_score': players[0].score, 'player_2_score': players[1].score,
-                                        'player_3_score': players[2].score, 'player_4_score': players[3].score})
+                                        'player_3_score': players[2].score, 'player_4_score': players[3].score,
+                                        'player_1_acc': players[0].accuracy, 'player_2_acc': players[1].accuracy,
+                                        'player_3_acc': players[2].accuracy, 'player_4_acc': players[3].accuracy})

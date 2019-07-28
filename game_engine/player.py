@@ -26,6 +26,7 @@ class Player:
         self.reward = 0
         self.wins = 0
         self.prediction = -1
+        self.accuracy = 0
 
     def get_playable_cards(self, first):
         """Determines the currently possible cards that player can play, based on his hand and the suit of the first
