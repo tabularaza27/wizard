@@ -93,7 +93,7 @@ def load_data(experiment_number, load_histos=False, log_path=None, time_range=[0
     else:
         log_path = os.path.join(log_path, '*A*')
 
-    print(f'files are loaded from paths {log_path}')
+    # print(f'files are loaded from paths {log_path}')
 
     # get file paths for each player
     player_paths = glob.glob(log_path)
@@ -143,6 +143,7 @@ def print_infos(data_set):
             for summary, data in summaries.items():
                 print(summary, f'({len(data)} time steps)')
             print('\n')
+
 
 
 ### Plotting Functionalities ###

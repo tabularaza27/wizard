@@ -492,7 +492,7 @@ def evaluate_all_combinations(flags):
     #    evaluate_single_combination(combination, flags, other_agents)
 
 
-def evaluate_single_combination(combination, flags, other_agents):
+def evaluate_single_combination(combination, flags, other_agents, merlin_train=False):
     """Evaluates trained TFAgentsPPOAgent against one combination (3 Agents) of agents
 
     the models and logs for every combination are saved in a dedicated folder (/evaluation/combination_name)
@@ -502,6 +502,7 @@ def evaluate_single_combination(combination, flags, other_agents):
         combination (tuple): (agent1_id, agent2_id, agent3_id)
         flags (dict): Constants used throughout the program, usually things like how often stuff should be plotted / saved etc.
         other_agents (dict): definition of agents. see evaluate_all_combinations()
+        merlin_train (bool): if true let meRLin (PPO_NN) also train during evaluation
     """
     combination = list(combination)
     combination_name = f'{combination[0]}__{combination[1]}__{combination[2]}'
@@ -517,18 +518,25 @@ def evaluate_single_combination(combination, flags, other_agents):
     agent_creator = lambda: [create_agent(other_agents[agent], models_path=modelspath) for agent in combination]
 
     print(f'########## Start Evaluation against agents {combination_name} ############')
-    evaluate(tb, flags, other_agents=agent_creator)
+    evaluate(tb, flags, other_agents=agent_creator, merlin_train=merlin_train)
 
 
-def evaluate(tb, flags, other_agents):
+def evaluate(tb, flags, other_agents, merlin_train=False):
     """Evaluate the TFAgentsPPOAgent against `other_agents`
+
+    Args:
+        merlin_train (bool): if true let meRLin (PPO_NN) also train during evaluation
 
     Models for all agents are save, meaning that they are trained. Note that our agent has models fixed so in the
     save_models() method nothing happens, i.e. it does not train. We let the other agents learn during evaluation to
     show the strength of our agent.
     """
 
-    rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
+    if merlin_train:
+        rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=False)
+    else:
+        rl_agent = TFAgentsPPOAgent(featurizer=OriginalFeaturizer(), keep_models_fixed=True)
+
     evaluation_agents = [rl_agent] + other_agents()
 
     for game_num in play_games(lambda: evaluation_agents, tb, range(4), flags):
