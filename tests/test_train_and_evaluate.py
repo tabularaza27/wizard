@@ -463,12 +463,16 @@ def evaluate_all_combinations(flags):
     # RB - Rule Based
     # Avg - AverageRandomPlayer
     # DQN is the Original DQN Implementation from the github repo we found
-    other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
-                    'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
-                    'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+    # other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
+    #                 'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
+    #                 'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+    #                 'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
+    #                 'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
+    #                 'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
+
+    other_agents = {'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
                     'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
-                    'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
-                    'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
+                    'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor}}
 
     # get all possible combinations of the above agents
     combinations = list(itertools.combinations(other_agents, 3))
@@ -505,7 +509,7 @@ def evaluate_single_combination(combination, flags, other_agents):
     """
     combination = list(combination)
     combination_name = f'{combination[0]}__{combination[1]}__{combination[2]}'
-    experiment_path = os.path.join('evaluation', combination_name)
+    experiment_path = os.path.join('evaluate', combination_name)
     logpath = os.path.join(experiment_path, 'logs')
     modelspath = os.path.join(experiment_path, 'models')
 
@@ -588,7 +592,7 @@ def create_agent(agent_dict, models_path):
 
 def main():
     default_flags = ({
-        'tensorboard_plot_frequency': 20,
+        'tensorboard_plot_frequency': 100,
         'agent_save_frequency': 50,
         'pool_save_frequency': 100,
         'max_pool_size': 500,
