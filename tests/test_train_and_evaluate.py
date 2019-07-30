@@ -29,6 +29,17 @@ from agents.predictors import RuleBasedPredictor
 from agents.featurizers import OriginalFeaturizer
 from agents.original.rl_agents import OriginalRLAgent
 
+# Nomenclature of Agents: agentName_predictor
+# NN - NeuralNetwork
+# RB - Rule Based
+# Avg - AverageRandomPlayer
+# DQN is the Original DQN Implementation from the github repo we found
+OTHER_AGENTS = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
+                'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
+                'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
+                'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
+                'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
+                'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
 
 class TensorboardWrapper:
     def __init__(self, launch_tensorboard=True, logpath=None):
@@ -458,20 +469,8 @@ def evaluate_all_combinations(flags):
     * AverageRandomPlayer
     """
 
-    # Nomenclature of Agents: agentName_predictor
-    # NN - NeuralNetwork
-    # RB - Rule Based
-    # Avg - AverageRandomPlayer
-    # DQN is the Original DQN Implementation from the github repo we found
-    other_agents = {'PPO_RB': {'Agent': TFAgentsPPOAgent, 'Predictor': RuleBasedPredictor},
-                    'RB_NN': {'Agent': RuleBasedAgent, 'Predictor': NNPredictor},
-                    'RB_RB': {'Agent': RuleBasedAgent, 'Predictor': RuleBasedPredictor},
-                    'DQN_NN': {'Agent': OriginalRLAgent, 'Predictor': NNPredictor},
-                    'DQN_RB': {'Agent': OriginalRLAgent, 'Predictor': RuleBasedPredictor},
-                    'Avg': {'Agent': AverageRandomPlayer, 'Predictor': None}}
-
     # get all possible combinations of the above agents
-    combinations = list(itertools.combinations(other_agents, 3))
+    combinations = list(itertools.combinations(OTHER_AGENTS, 3))
 
     print('Start Parallel Process')
 
@@ -479,7 +478,7 @@ def evaluate_all_combinations(flags):
     pool = mp.Pool(mp.cpu_count())
 
     for combination in combinations:
-        pool.apply_async(evaluate_single_combination, args=(combination, flags, other_agents))
+        pool.apply_async(evaluate_single_combination, args=(combination, flags, OTHER_AGENTS))
 
     # result_objects = [pool.apply_async(evaluate_single_combination, args=(combination, flags, other_agents)) for combination in combinations]
     # results = [r.get()[1] for r in result_objects]
@@ -492,7 +491,7 @@ def evaluate_all_combinations(flags):
     #    evaluate_single_combination(combination, flags, other_agents)
 
 
-def evaluate_single_combination(combination, flags, other_agents, merlin_train=False):
+def evaluate_single_combination(combination, flags, merlin_train=False):
     """Evaluates trained TFAgentsPPOAgent against one combination (3 Agents) of agents
 
     the models and logs for every combination are saved in a dedicated folder (/evaluation/combination_name)
@@ -501,7 +500,6 @@ def evaluate_single_combination(combination, flags, other_agents, merlin_train=F
     Args:
         combination (tuple): (agent1_id, agent2_id, agent3_id)
         flags (dict): Constants used throughout the program, usually things like how often stuff should be plotted / saved etc.
-        other_agents (dict): definition of agents. see evaluate_all_combinations()
         merlin_train (bool): if true let meRLin (PPO_NN) also train during evaluation
     """
     combination = list(combination)
@@ -515,7 +513,7 @@ def evaluate_single_combination(combination, flags, other_agents, merlin_train=F
 
     # create function that returns instances of the agents ( this is done to be in accordance to the rest of the
     # implementation --> see main() )
-    agent_creator = lambda: [create_agent(other_agents[agent], models_path=modelspath) for agent in combination]
+    agent_creator = lambda: [create_agent(OTHER_AGENTS[agent], models_path=modelspath) for agent in combination]
 
     print(f'########## Start Evaluation against agents {combination_name} ############')
     evaluate(tb, flags, other_agents=agent_creator, merlin_train=merlin_train)
@@ -596,7 +594,7 @@ def create_agent(agent_dict, models_path):
 
 def main():
     default_flags = ({
-        'tensorboard_plot_frequency': 20,
+        'tensorboard_plot_frequency': 200,
         'agent_save_frequency': 50,
         'pool_save_frequency': 100,
         'max_pool_size': 500,
@@ -624,6 +622,8 @@ def main():
 
     if selected_subcmd == 'evaluate_all_combinations':
         evaluate_all_combinations(flags=flags)
+    elif selected_subcmd == 'merlin_train':
+        evaluate_single_combination(('RB_NN','DQN_NN','DQN_RB'), flags, merlin_train=True)
     else:
         selected_fn, args = subcmds[selected_subcmd]
         selected_fn(TensorboardWrapper(), flags, *args)
