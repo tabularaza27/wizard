@@ -1,38 +1,40 @@
-# Wizard RL Engine
+# Applying Reinforcement Learning to the Card Game Wizard
 
-#### Setup
-Activate the virualenv: \
-```$ source Dependencies/bin/activate ```
+This repo contains the implementation for an agent learning to play the card game [wizard](https://en.wikipedia.org/wiki/Wizard_(card_game)) through Reinforcement Learning. In the current implementation a version of Proximal Policy Optimization was used. However, it is trivial to use other algorithms for learning with the current setup.
+
+This work was created during the course _Neural Information Processing Projects_ at TU Berlin in the spring term 2019. Supervisor was Vaios Laschos
+
+## Setup
 
 Install dependencies: \
 ```pip install -r requirements.txt```
 
-#### Usage
+## Repo Structure
 
-From the root directory, to run a standard RL game: \
-```$ python3 main.py```
+* agents --> contains the implementation for the rl agents and rule based agent. tf-agents library is used
+	* contains implementation for predictors, featurizers  	
+* evaluation --> saves models and logs during evaluation process
+* game engine --> contains implementation of game logic 
+* tests --> contains code for training and evaluation the agent
+* wizard_site --> contains implementation for GUI. Used for evaluating agents against human players
 
-To update the requirements.txt file: \
-```$ pip freeze > requirements.txt```
+## Usage
 
-#### Nomenclature
+To train the agent: \   
+```$ python3 tests/test_train_and_evaluate.py train_vs_old_self```
 
-* Game
-* Round
-* Trick
-* Player
-* Card
-* Deck  
+To evaluate the agent: \  
+```$ python3 tests/test_train_and_evaluate.py evaluate```
 
-#### Git Commands
-https://github.com/joshnh/Git-Commands
+Also see the comments and docstrings in _tests/test_train_and_evaluate.py_A
 
-#### Style Guide
+To start the GUI: \  
+From the root directory run: ```python wizard_site/manage.py runserver```
 
-https://www.python.org/dev/peps/pep-0008/
+## Paper
 
-https://google.github.io/styleguide/pyguide.html
+For more detailed information on the implementation and results check the paper and poster in _[/paper](/paper)_
 
-#### Markdown CheatSheet
+## Contributers
 
-https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet#code
+Jonas Dippel, Callum Waters, Til Jasper Ullrich, Kai Jeggle
