@@ -26,7 +26,10 @@ To train the agent: \
 To evaluate the agent: \  
 ```$ python3 tests/test_train_and_evaluate.py evaluate```
 
-Also see the comments and docstrings in _tests/test_train_and_evaluate.py_A
+The above commands will also start a tensorboard session on port 6006.  
+
+Also see the comments and docstrings in _tests/test_train_and_evaluate.py_
+
 
 To start the GUI: \  
 From the root directory run: ```python wizard_site/manage.py runserver```
