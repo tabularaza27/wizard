@@ -249,12 +249,12 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
                                                                         smoothing_polyorder=smoothing_polyorder)
             # smoothed_data = savgol_filter(y, window_length=smoothing_window_length, polyorder=3)
             smoothed_data = smooth(y, weight=smoothing_factor)
-            ax.set_xlabel('games', labelpad=5)
-            ax.set_ylabel(ylabel)
+            ax.set_xlabel('games', labelpad=5,fontsize=15)
+            ax.set_ylabel(ylabel, fontsize=15)
             # ax.plot(x, smoothed_data, linewidth=3.5, color=f'C{index}')
             ax.plot(x, smoothed_data, linewidth=3.5, color=LEGEND[agent]["color"])
             ax.tick_params(axis='both', labelsize=15)
-            labels.append(f'{LEGEND[agent]["name"]} (smoothed)')
+            labels.append(f'meRLin (smoothed)')
 
         if plot_original:
             if smoothing:
@@ -265,7 +265,7 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
                 opacity = 1
 
             ax.plot(x, y, color=LEGEND[agent]["color"], linestyle=linestyle, alpha=opacity)
-            labels.append(LEGEND[agent]["name"])
+            labels.append('meRLin')
 
     if ylim:
         ax.set_ylim(ylim)
@@ -281,4 +281,5 @@ def plot_scalar(data, summary_name, agents=None, plot_original=True, smoothing=F
             os.makedirs('plots')
 
         plt.draw()
+        tikzplotlib.save(f'plots/{plot_name}.tikz')
         fig.savefig(f'plots/{plot_name}.svg', bbox_inches='tight')
